@@ -1,0 +1,251 @@
+package llm_plugin
+
+import (
+	"context"
+	"errors"
+	"github.com/bincooo/AutoAI/types"
+	"github.com/bincooo/AutoAI/vars"
+	clVars "github.com/bincooo/claude-api/vars"
+	"github.com/bincooo/llm-plugin/repo"
+	pTypes "github.com/bincooo/llm-plugin/types"
+	wapi "github.com/bincooo/openai-wapi"
+	"github.com/sirupsen/logrus"
+	zero "github.com/wdvxdr1123/ZeroBot"
+	"regexp"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+var (
+	mu           sync.Mutex
+	contextStore = make(map[string]types.ConversationContext)
+)
+
+const (
+	Poe       = "poe"
+	BaseChain = "replace,cache,args,"
+)
+
+func deleteConversationContext(ctx *zero.Ctx) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	var id int64 = 0
+	if ctx.Event.GroupID == 0 {
+		id = ctx.Event.UserID
+	} else {
+		id = ctx.Event.GroupID
+	}
+	key := strconv.FormatInt(id, 10)
+	delete(contextStore, key)
+}
+
+func getId(ctx *zero.Ctx) string {
+	var id int64 = 0
+	if ctx.Event.GroupID == 0 {
+		id = ctx.Event.UserID
+	} else {
+		id = ctx.Event.GroupID
+	}
+	return strconv.FormatInt(id, 10)
+}
+
+func updateConversationContext(cctx types.ConversationContext) {
+	mu.Lock()
+	defer mu.Unlock()
+	contextStore[cctx.Id] = cctx
+	logrus.Infoln("[MiaoX] - 更新ConversationContext： ", cctx.Id)
+}
+
+func createConversationContext(ctx *zero.Ctx, bot string) (types.ConversationContext, error) {
+	key := getId(ctx)
+
+	if cctx, ok := contextStore[key]; ok {
+		logrus.Infoln("[MiaoX] - 获取缓存ConversationContext： ", key)
+		return cctx, nil
+	}
+
+	global := repo.GetGlobal()
+	if bot == "" {
+		bot = global.Bot
+	}
+
+	model := ""
+	if strings.HasPrefix(bot, vars.Bing) {
+		expr := bot[len(bot)-1:]
+		switch expr {
+		case "b":
+			model = "Balanced"
+		case "p":
+			model = "Precise"
+		case "s":
+			model = "Sydney"
+		default:
+			model = "Creative"
+		}
+		bot = vars.Bing
+	}
+
+	// POE
+	if strings.HasPrefix(bot, Poe) {
+		switch bot {
+		case Poe + "-gpt3.5":
+			model = "gpt-3.5-turbo"
+		case Poe + "-gpt4":
+			model = "gpt-4"
+		case Poe + "-gpt4-32k":
+			model = "gpt-4-32k"
+		case Poe + "-claude+":
+			model = "Claude+"
+		case Poe + "-claude100k":
+			model = "Claude-instant-100k"
+		default:
+			model = "gpt-3.5-turbo"
+		}
+		bot = Poe
+	}
+
+	tokens, err := repo.FindTokens(bot)
+	if err != nil {
+		return types.ConversationContext{}, errors.New("查询凭证失败, 请先添加`" + bot + "`凭证")
+	}
+	if len(tokens) == 0 {
+		return types.ConversationContext{}, errors.New("无可用的凭证")
+	}
+
+	if strings.HasPrefix(bot, vars.Claude) {
+		if bot == vars.Claude+"-web" {
+			model = clVars.Model4WebClaude2
+		} else {
+			model = clVars.Model4Slack
+		}
+		bot = vars.Claude
+	}
+
+	args := pTypes.ConversationContextArgs{}
+	cctx := types.ConversationContext{
+		Id:        key,
+		Bot:       bot,
+		MaxTokens: global.MaxTokens,
+		Chain:     BaseChain,
+		Model:     model,
+		Proxy:     global.Proxy,
+	}
+
+	if bot == vars.OpenAIAPI {
+		// 检查余额
+		if e := checkApiOpenai(*tokens[0], global.Proxy); e != nil {
+			return cctx, e
+		}
+	}
+
+	if bot == vars.OpenAIWeb {
+		// 检查失效
+		cctx.BaseURL = "https://ai.fakeopen.com/api"
+		if err := checkWebOpenai(tokens[0], global.Proxy); err != nil {
+			return cctx, err
+		}
+
+		// 为空，尝试登陆
+		if tokens[0].Token == "" {
+			if err := loginWebOpenai(*tokens[0], global); err != nil {
+				return cctx, err
+			}
+		}
+	}
+
+	if bot == vars.Claude {
+		cctx.AppId = tokens[0].AppId
+	}
+
+	if bot == vars.Bing {
+		cctx.BaseURL = global.NbServ
+	}
+
+	// 默认预设
+	if global.Preset != "" {
+		suf := ""
+		if bot == vars.Claude && model == clVars.Model4WebClaude2 {
+			suf = "-web"
+		}
+		preset := repo.GetPresetScene("", global.Preset, bot+suf)
+		if preset == nil {
+			logrus.Warn("预设`", global.Preset, "`不存在")
+		} else if preset.Type != bot+suf {
+			logrus.Warn("预设`", global.Preset, "`类型不匹配, 需要（", bot, "）实际为（", preset.Type, "）")
+		} else {
+			args.PresetId = preset.Id
+			cctx.Preset = preset.Content
+			cctx.Format = preset.Message
+			if preset.Chain != "" {
+				cctx.Chain += preset.Chain
+			}
+		}
+	}
+
+	if tokens[0].BaseURL != "" {
+		cctx.BaseURL = tokens[0].BaseURL
+	}
+
+	args.TokenId = tokens[0].Id
+	cctx.Token = tokens[0].Token
+	cctx.Data = args
+
+	updateConversationContext(cctx)
+	logrus.Infoln("[MiaoX] - 创建新的ConversationContext： ", key)
+	return cctx, nil
+}
+
+// 登陆网页版
+func loginWebOpenai(token repo.Token, global repo.Global) error {
+	t, err := wapi.WebLogin(token.Email, token.Passwd, global.Proxy)
+	if err != nil {
+		return errors.New("OpenAI WEB `" + token.Key + "`登陆失败: " + err.Error())
+	}
+	token.Token = t
+	token.Expire = time.Now().Add(15 * 24 * time.Hour).Format("2006-01-02 15:04:05")
+	repo.UpdateToken(token)
+	return nil
+}
+
+// 检查余额
+func checkApiOpenai(token repo.Token, proxy string) error {
+	if billing, _ := wapi.Query(context.Background(), token.Token, proxy); billing == nil || billing.System-billing.Soft < 0 {
+		return errors.New("Err: `" + token.Key + "`凭证余额为0")
+	}
+	return nil
+}
+
+// 检查过期时间
+func checkWebOpenai(token *repo.Token, proxy string) error {
+	if token.Expire != "" && token.Expire != "-1" {
+		expire, err := time.Parse("2006-01-02 15:04:05", token.Expire)
+		if err != nil {
+			return errors.New("warning：[" + token.Key + "] `" + token.Expire + "`过期日期解析有误")
+		}
+
+		if expire.Before(time.Now()) {
+			// 已过期
+			t, err := wapi.WebLogin(token.Email, token.Passwd, proxy)
+			if err != nil {
+				return errors.New("OpenAI WEB `" + t + "`登陆失败: " + err.Error())
+			}
+			token.Token = t
+			token.Expire = time.Now().Add(14 * 24 * time.Hour).Format("2006-01-02 15:04:05")
+			repo.UpdateToken(*token)
+		}
+	}
+	return nil
+}
+
+func parseMessage(ctx *zero.Ctx) string {
+	// and more...
+	text := ctx.ExtractPlainText()
+	re := regexp.MustCompile(`喵{2,}`)
+	text = re.ReplaceAllString(text, "喵~")
+	re = regexp.MustCompile(`汪{2,}`)
+	text = re.ReplaceAllString(text, "汪~")
+	return text
+}
