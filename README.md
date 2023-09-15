@@ -24,3 +24,6 @@ setp 3:
     |- data
         |- miaox
 ```
+
+### -
+启动`ZeroBot-Plugin`后在浏览器内访问 http://127.0.0.1:8081 配置接入信息即可
