@@ -16,7 +16,9 @@ if *runcfg != "" {
 ```
 
 setp 3:
-下载miaox.zip数据资源文件解压到`ZeroBot-Plugin`的`data`目录下
+下载`data-1.zip`数据资源文件：
+
+[点我下载](https://github.com/bincooo/llm-plugin/archive/refs/tags/data-1.zip) 解压并将目录名改名`miaox`移动至`ZeroBot-Plugin`的`data`目录下
 ```text
 |- ZeroBot-Plugin
     |- data
