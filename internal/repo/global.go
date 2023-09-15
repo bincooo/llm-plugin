@@ -1,7 +1,7 @@
 package repo
 
 import (
-	"github.com/bincooo/llm-plugin/types"
+	"github.com/bincooo/llm-plugin/internal/types"
 	"github.com/sirupsen/logrus"
 )
 

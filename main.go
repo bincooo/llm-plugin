@@ -1,31 +1,34 @@
-package llm_plugin
+package llm
 
 import (
 	"context"
-	ctrl "github.com/FloatTech/zbpctrl"
-	"github.com/FloatTech/zbputils/control"
-	"github.com/FloatTech/zbputils/ctxext"
-	"github.com/bincooo/AutoAI"
-	store2 "github.com/bincooo/AutoAI/store"
-	"github.com/bincooo/AutoAI/types"
-	xvars "github.com/bincooo/AutoAI/vars"
-	clVars "github.com/bincooo/claude-api/vars"
-	"github.com/bincooo/llm-plugin/chain"
-	"github.com/bincooo/llm-plugin/cmd"
-	"github.com/bincooo/llm-plugin/repo"
-	"github.com/bincooo/llm-plugin/repo/store"
-	pTypes "github.com/bincooo/llm-plugin/types"
-	"github.com/bincooo/llm-plugin/utils"
-	"github.com/bincooo/llm-plugin/vars"
-	wapi "github.com/bincooo/openai-wapi"
-	"github.com/sirupsen/logrus"
-	zero "github.com/wdvxdr1123/ZeroBot"
-	"github.com/wdvxdr1123/ZeroBot/message"
+	"github.com/bincooo/edge-api/util"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/FloatTech/zbputils/control"
+	"github.com/FloatTech/zbputils/ctxext"
+	"github.com/bincooo/AutoAI"
+	"github.com/bincooo/llm-plugin/cmd"
+	"github.com/bincooo/llm-plugin/internal/chain"
+	"github.com/bincooo/llm-plugin/internal/repo"
+	"github.com/bincooo/llm-plugin/internal/repo/store"
+	"github.com/bincooo/llm-plugin/internal/types"
+	"github.com/bincooo/llm-plugin/utils"
+	"github.com/bincooo/llm-plugin/vars"
+	"github.com/sirupsen/logrus"
+	"github.com/wdvxdr1123/ZeroBot/message"
+
+	ctrl "github.com/FloatTech/zbpctrl"
+	autostore "github.com/bincooo/AutoAI/store"
+	autotypes "github.com/bincooo/AutoAI/types"
+	xvars "github.com/bincooo/AutoAI/vars"
+	claudevars "github.com/bincooo/claude-api/vars"
+	wapi "github.com/bincooo/openai-wapi"
+	zero "github.com/wdvxdr1123/ZeroBot"
 )
 
 var help = `
@@ -47,14 +50,14 @@ var (
 	})
 
 	//mgr types.BotManager
-	lmt types.Limiter
+	lmt autotypes.Limiter
 )
 
 func init() {
 	vars.E = engine
 
 	var err error
-	if vars.Loading, err = os.ReadFile("data/load.gif"); err != nil {
+	if vars.Loading, err = os.ReadFile(vars.E.DataFolder() + "/load.gif"); err != nil {
 		panic(err)
 	}
 
@@ -106,7 +109,7 @@ func excludeOnMessage(ctx *zero.Ctx) bool {
 
 func historyCommand(ctx *zero.Ctx) {
 	key := getId(ctx)
-	messages := store2.GetMessages(key)
+	messages := autostore.GetMessages(key)
 	logrus.Info(messages)
 	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已在后台打印"))
 }
@@ -121,11 +124,12 @@ func conversationCommand(ctx *zero.Ctx) {
 	cctx, err := createConversationContext(ctx, "")
 	if err != nil {
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("发生异常: "+err.Error()))
+		go handleBingCaptcha(cctx.Token, err)
 		return
 	}
 
 	cctx.Prompt = parseMessage(ctx)
-	args := cctx.Data.(pTypes.ConversationContextArgs)
+	args := cctx.Data.(types.ConversationContextArgs)
 	args.Current = strconv.FormatInt(ctx.Event.Sender.ID, 10)
 	args.Nickname = ctx.Event.Sender.NickName
 	cctx.Data = args
@@ -135,7 +139,7 @@ func conversationCommand(ctx *zero.Ctx) {
 	}
 
 	delay := utils.NewDelay(ctx)
-	lmtHandle := func(response types.PartialResponse) {
+	lmtHandle := func(response autotypes.PartialResponse) {
 		if response.Status == xvars.Begin {
 			delay.Defer()
 		}
@@ -147,6 +151,7 @@ func conversationCommand(ctx *zero.Ctx) {
 		}
 		if response.Error != nil {
 			errText := response.Error.Error()
+			go handleBingCaptcha(cctx.Token, response.Error)
 			if strings.Contains(errText, "code=401") {
 				// Token 过期了
 				if args.TokenId != "" {
@@ -273,7 +278,7 @@ func enablePresetSceneCommand(ctx *zero.Ctx) {
 	}
 
 	presetType := cctx.Bot
-	if cctx.Bot == xvars.Claude && cctx.Model == clVars.Model4WebClaude2 {
+	if cctx.Bot == xvars.Claude && cctx.Model == claudevars.Model4WebClaude2 {
 		presetType = xvars.Claude + "-web"
 	}
 
@@ -322,7 +327,7 @@ func presetScenesCommand(ctx *zero.Ctx) {
 
 func switchAICommand(ctx *zero.Ctx) {
 	bot := ctx.State["regex_matched"].([]string)[1]
-	var cctx types.ConversationContext
+	var cctx autotypes.ConversationContext
 	switch bot {
 	case xvars.OpenAIAPI,
 		xvars.OpenAIWeb,
@@ -352,6 +357,26 @@ func switchAICommand(ctx *zero.Ctx) {
 	lmt.Remove(cctx.Id, cctx.Bot)
 	store.DeleteOnline(cctx.Id)
 	ctx.Send("已切换`" + bot + "`AI模型")
+}
+
+// 尝试解决Bing人机检验
+func handleBingCaptcha(token string, err error) {
+	content := err.Error()
+	if strings.Contains(content, "User needs to solve CAPTCHA to continue") {
+		// content = "用户需要人机验证...  已尝试自动验证，若重新生成文本无效请手动验证。"
+		if strings.Contains(token, "_U=") {
+			split := strings.Split(token, ";")
+			for _, item := range split {
+				if strings.Contains(item, "_U=") {
+					token = strings.TrimSpace(strings.ReplaceAll(item, "_U=", ""))
+					break
+				}
+			}
+		}
+		if e := util.SolveCaptcha(token); e != nil {
+			logrus.Error("尝试解析Bing人机检验失败：", e)
+		}
+	}
 }
 
 func Run(addr string) {

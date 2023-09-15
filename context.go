@@ -1,26 +1,28 @@
-package llm_plugin
+package llm
 
 import (
 	"context"
 	"errors"
-	"github.com/bincooo/AutoAI/types"
-	"github.com/bincooo/AutoAI/vars"
-	clVars "github.com/bincooo/claude-api/vars"
-	"github.com/bincooo/llm-plugin/repo"
-	pTypes "github.com/bincooo/llm-plugin/types"
-	wapi "github.com/bincooo/openai-wapi"
-	"github.com/sirupsen/logrus"
-	zero "github.com/wdvxdr1123/ZeroBot"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/bincooo/AutoAI/vars"
+	"github.com/bincooo/llm-plugin/internal/repo"
+	"github.com/bincooo/llm-plugin/internal/types"
+	"github.com/sirupsen/logrus"
+
+	autotypes "github.com/bincooo/AutoAI/types"
+	claudevars "github.com/bincooo/claude-api/vars"
+	wapi "github.com/bincooo/openai-wapi"
+	zero "github.com/wdvxdr1123/ZeroBot"
 )
 
 var (
 	mu           sync.Mutex
-	contextStore = make(map[string]types.ConversationContext)
+	contextStore = make(map[string]autotypes.ConversationContext)
 )
 
 const (
@@ -52,14 +54,14 @@ func getId(ctx *zero.Ctx) string {
 	return strconv.FormatInt(id, 10)
 }
 
-func updateConversationContext(cctx types.ConversationContext) {
+func updateConversationContext(cctx autotypes.ConversationContext) {
 	mu.Lock()
 	defer mu.Unlock()
 	contextStore[cctx.Id] = cctx
 	logrus.Infoln("[MiaoX] - 更新ConversationContext： ", cctx.Id)
 }
 
-func createConversationContext(ctx *zero.Ctx, bot string) (types.ConversationContext, error) {
+func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.ConversationContext, error) {
 	key := getId(ctx)
 
 	if cctx, ok := contextStore[key]; ok {
@@ -109,23 +111,23 @@ func createConversationContext(ctx *zero.Ctx, bot string) (types.ConversationCon
 
 	tokens, err := repo.FindTokens(bot)
 	if err != nil {
-		return types.ConversationContext{}, errors.New("查询凭证失败, 请先添加`" + bot + "`凭证")
+		return autotypes.ConversationContext{}, errors.New("查询凭证失败, 请先添加`" + bot + "`凭证")
 	}
 	if len(tokens) == 0 {
-		return types.ConversationContext{}, errors.New("无可用的凭证")
+		return autotypes.ConversationContext{}, errors.New("无可用的凭证")
 	}
 
 	if strings.HasPrefix(bot, vars.Claude) {
 		if bot == vars.Claude+"-web" {
-			model = clVars.Model4WebClaude2
+			model = claudevars.Model4WebClaude2
 		} else {
-			model = clVars.Model4Slack
+			model = claudevars.Model4Slack
 		}
 		bot = vars.Claude
 	}
 
-	args := pTypes.ConversationContextArgs{}
-	cctx := types.ConversationContext{
+	args := types.ConversationContextArgs{}
+	cctx := autotypes.ConversationContext{
 		Id:        key,
 		Bot:       bot,
 		MaxTokens: global.MaxTokens,
@@ -167,7 +169,7 @@ func createConversationContext(ctx *zero.Ctx, bot string) (types.ConversationCon
 	// 默认预设
 	if global.Preset != "" {
 		suf := ""
-		if bot == vars.Claude && model == clVars.Model4WebClaude2 {
+		if bot == vars.Claude && model == claudevars.Model4WebClaude2 {
 			suf = "-web"
 		}
 		preset := repo.GetPresetScene("", global.Preset, bot+suf)

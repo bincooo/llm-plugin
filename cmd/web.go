@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/bincooo/llm-plugin/types"
+	"github.com/bincooo/llm-plugin/internal/types"
 	"github.com/bincooo/llm-plugin/vars"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"

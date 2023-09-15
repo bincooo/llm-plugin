@@ -1,22 +1,22 @@
 package chain
 
 import (
-	"github.com/bincooo/AutoAI/types"
-	pTypes "github.com/bincooo/llm-plugin/types"
+	autotypes "github.com/bincooo/AutoAI/types"
+	"github.com/bincooo/llm-plugin/internal/types"
 	"strings"
 )
 
 type ArgsInterceptor struct {
-	types.BaseInterceptor
+	autotypes.BaseInterceptor
 }
 
-func (c *ArgsInterceptor) Before(bot types.Bot, ctx *types.ConversationContext) bool {
-	args := ctx.Data.(pTypes.ConversationContextArgs)
+func (c *ArgsInterceptor) Before(bot autotypes.Bot, ctx *autotypes.ConversationContext) (bool, error) {
+	args := ctx.Data.(types.ConversationContextArgs)
 	if strings.Contains(ctx.Prompt, "[qq]") {
 		ctx.Prompt = strings.Replace(ctx.Prompt, "[qq]", args.Current, -1)
 	}
 	if strings.Contains(ctx.Prompt, "[name]") {
 		ctx.Prompt = strings.Replace(ctx.Prompt, "[name]", args.Nickname, -1)
 	}
-	return true
+	return true, nil
 }

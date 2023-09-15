@@ -2,7 +2,7 @@ package repo
 
 import (
 	sql "github.com/FloatTech/sqlite"
-	"github.com/bincooo/llm-plugin/types"
+	"github.com/bincooo/llm-plugin/internal/types"
 	"github.com/sirupsen/logrus"
 	"strconv"
 	"time"
