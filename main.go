@@ -54,7 +54,7 @@ func init() {
 	vars.E = engine
 
 	var err error
-	if vars.Loading, err = os.ReadFile(engine.DataFolder() + "load.gif"); err != nil {
+	if vars.Loading, err = os.ReadFile("data/load.gif"); err != nil {
 		panic(err)
 	}
 

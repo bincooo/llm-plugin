@@ -83,7 +83,7 @@ func postRef() (bool, error) {
 		return false, errors.New("ZeroBot未初始化")
 	}
 
-	cmd.sql.DBPath = "llm-plugin/data/storage.db"
+	cmd.sql.DBPath = vars.E.DataFolder() + "/storage.db"
 	err := cmd.sql.Open(time.Hour * 24)
 	if err != nil {
 		return false, err

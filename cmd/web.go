@@ -106,6 +106,10 @@ func Register(base string, sv types.ModelService, m Menu) {
 }
 
 func Run(addr string) {
+	logrus.Info("===========================")
+	logrus.Info("|  喵小爱插件 - llm-plugin  |")
+	logrus.Info("===========================")
+	logrus.Info("喵小爱插件数据路径：" + vars.E.DataFolder())
 	r.Static("/model", vars.E.DataFolder()+"/static/model")
 	r.Static("/assets", vars.E.DataFolder()+"/static/assets")
 	r.StaticFile("/", vars.E.DataFolder()+"/static/index.html")
