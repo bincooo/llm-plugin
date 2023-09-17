@@ -44,7 +44,7 @@ const gTpl = `
 
 type DrawBody struct {
 	EnableHr          bool    `json:"enable_hr"`
-	HrScale           int     `json:"hr_scale"`
+	HrScale           float64 `json:"hr_scale"`
 	HrUpscaler        string  `json:"hr_upscaler"`
 	HrSecondPassSteps int     `json:"hr_second_pass_steps"`
 	HrResizeX         int     `json:"hr_resize_x"`
