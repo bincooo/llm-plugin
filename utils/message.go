@@ -16,6 +16,7 @@ var (
 )
 
 func StringToMessageSegment(msg string) []message.MessageSegment {
+	msg = removeUrlBlock(msg)
 	// 转换消息对象Chain
 	pattern := `\[@[0-9]{5,}\]`
 	r, _ := regexp.Compile(pattern)
@@ -45,6 +46,13 @@ func StringToMessageSegment(msg string) []message.MessageSegment {
 	}
 
 	return slice
+}
+
+func removeUrlBlock(msg string) string {
+	regexCompile := regexp.MustCompile(`\[\^[0-9]\^]`)
+	msg = regexCompile.ReplaceAllString(msg, "")
+	regexCompile = regexp.MustCompile(`\[\^[0-9]\^\^`)
+	return regexCompile.ReplaceAllString(msg, "...")
 }
 
 func NewDelay(ctx *zero.Ctx) *Delay {

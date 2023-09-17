@@ -341,7 +341,8 @@ func switchAICommand(ctx *zero.Ctx) {
 		Poe + "-gpt4",
 		Poe + "-gpt4-32k",
 		Poe + "-claude+",
-		Poe + "-claude100k":
+		Poe + "-claude100k",
+		xvars.Dify:
 		deleteConversationContext(ctx)
 		c, err := createConversationContext(ctx, bot)
 		if err != nil {
