@@ -75,7 +75,7 @@ type DrawBody struct {
 	AlwaysOnScripts   map[string]any `json:"alwayson_scripts"`
 }
 
-func DrawAI(bu string, prompt string, tpl string) ([]byte, error) {
+func DrawAI(proxy, bu, prompt, tpl string) ([]byte, error) {
 	// 获取实际地址
 	if bu != "" && strings.HasPrefix(bu, "redirect:") {
 		r, err := utils.NewHttp().GET(bu[9:]).
@@ -119,9 +119,12 @@ func DrawAI(bu string, prompt string, tpl string) ([]byte, error) {
 		return nil, err
 	}
 
-	r, err := utils.NewHttp().POST(bu+"/sdapi/v1/txt2img", bytes.NewReader(marshal)).
-		AddHeader("Content-Type", "application/json").
-		Build()
+	builder := utils.NewHttp().POST(bu+"/sdapi/v1/txt2img", bytes.NewReader(marshal)).
+		AddHeader("Content-Type", "application/json")
+	if proxy != "" {
+		builder.ProxyString(proxy)
+	}
+	r, err := builder.Build()
 	if err != nil {
 		return nil, err
 	}

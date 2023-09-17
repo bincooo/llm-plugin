@@ -5,6 +5,8 @@ import (
 	"github.com/bincooo/AutoAI/types"
 	"github.com/bincooo/AutoAI/vars"
 	"github.com/bincooo/llm-plugin/utils"
+	"strconv"
+	"time"
 )
 
 func main() {
@@ -14,7 +16,8 @@ func main() {
 	//manager.Reply(context, func(response types.PartialResponse) {
 	//
 	//})
-	_, err := utils.DrawAI("redirect:http://114.132.201.94:8082/sdapi/v1/redirect", "1girl", `{
+	beginTime := time.Now()
+	_, err := utils.DrawAI("", "redirect:http://114.132.201.94:8082/sdapi/v1/redirect", "1girl", `{
     "alwayson_scripts": {
     },
     "enable_hr": true,
@@ -44,6 +47,8 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
+	seconds := time.Now().Sub(beginTime).Seconds()
+	fmt.Println("耗时：" + strconv.FormatFloat(seconds, 'f', 0, 64) + "s")
 }
 
 func Context() types.ConversationContext {

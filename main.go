@@ -195,7 +195,7 @@ func drawCommand(ctx *zero.Ctx) {
 	logrus.Info("接收到作画请求，开始作画：", prompt)
 	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("这就开始画 ~"))
 	beginTime := time.Now()
-	imgBytes, err := utils.DrawAI(global.DrawServ, prompt, global.DrawBody)
+	imgBytes, err := utils.DrawAI(global.Proxy, global.DrawServ, prompt, global.DrawBody)
 	if err != nil {
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("作画失败："+err.Error()))
 		return
