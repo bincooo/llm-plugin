@@ -8,6 +8,7 @@ import (
 	"github.com/bincooo/AutoAI/utils"
 	"github.com/sirupsen/logrus"
 	"io"
+	"net/http"
 	"strings"
 )
 
@@ -43,43 +44,63 @@ const gTpl = `
 }`
 
 type DrawBody struct {
-	EnableHr          bool    `json:"enable_hr"`
-	HrScale           float64 `json:"hr_scale"`
-	HrUpscaler        string  `json:"hr_upscaler"`
-	HrSecondPassSteps int     `json:"hr_second_pass_steps"`
-	HrResizeX         int     `json:"hr_resize_x"`
-	HrResizeY         int     `json:"hr_resize_y"`
-	DenoisingStrength float64 `json:"denoising_strength"`
-	Styles            []any   `json:"styles"`
-	Seed              int     `json:"seed"`
-	Subseed           int     `json:"subseed"`
-	SubseedStrength   int     `json:"subseed_strength"`
-	SeedResizeFromH   int     `json:"seed_resize_from_h"`
-	SeedResizeFromW   int     `json:"seed_resize_from_w"`
-	SamplerName       string  `json:"sampler_name"`
-	SamplerIndex      string  `json:"sampler_index"`
-	BatchSize         int     `json:"batch_size"`
-	NIter             int     `json:"n_iter"`
-	Steps             int     `json:"steps"`
-	CfgScale          int     `json:"cfg_scale"`
-	Width             int     `json:"width"`
-	Height            int     `json:"height"`
-	RestoreFaces      bool    `json:"restore_faces"`
-	Tiling            bool    `json:"tiling"`
-	Prompt            string  `json:"prompt"`
-	NegativePrompt    string  `json:"negative_prompt"`
-	ScriptArgs        []any   `json:"script_args"`
-	ScriptName        any     `json:"script_name"`
+	EnableHr          bool           `json:"enable_hr"`
+	HrScale           float64        `json:"hr_scale"`
+	HrUpscaler        string         `json:"hr_upscaler"`
+	HrSecondPassSteps int            `json:"hr_second_pass_steps"`
+	HrResizeX         int            `json:"hr_resize_x"`
+	HrResizeY         int            `json:"hr_resize_y"`
+	DenoisingStrength float64        `json:"denoising_strength"`
+	Styles            []any          `json:"styles"`
+	Seed              int            `json:"seed"`
+	Subseed           int            `json:"subseed"`
+	SubseedStrength   int            `json:"subseed_strength"`
+	SeedResizeFromH   int            `json:"seed_resize_from_h"`
+	SeedResizeFromW   int            `json:"seed_resize_from_w"`
+	SamplerName       string         `json:"sampler_name"`
+	SamplerIndex      string         `json:"sampler_index"`
+	BatchSize         int            `json:"batch_size"`
+	NIter             int            `json:"n_iter"`
+	Steps             int            `json:"steps"`
+	CfgScale          int            `json:"cfg_scale"`
+	Width             int            `json:"width"`
+	Height            int            `json:"height"`
+	RestoreFaces      bool           `json:"restore_faces"`
+	Tiling            bool           `json:"tiling"`
+	Prompt            string         `json:"prompt"`
+	NegativePrompt    string         `json:"negative_prompt"`
+	ScriptArgs        []any          `json:"script_args"`
+	ScriptName        any            `json:"script_name"`
+	OverrideSettings  map[string]any `json:"override_settings"`
+	AlwaysOnScripts   map[string]any `json:"alwayson_scripts"`
 }
 
 func DrawAI(bu string, prompt string, tpl string) ([]byte, error) {
-	var body DrawBody
-	if tpl != "" {
-		if err := json.Unmarshal([]byte(tpl), &body); err != nil {
+	// 获取实际地址
+	if bu != "" && strings.HasPrefix(bu, "redirect:") {
+		r, err := utils.NewHttp().GET(bu[9:]).
+			AddHeader("Content-Type", "application/json").
+			Build()
+		if err != nil {
 			return nil, err
 		}
-	} else {
-		if err := json.Unmarshal([]byte(gTpl), &body); err != nil {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			return nil, err
+		}
+		if r.StatusCode != http.StatusOK {
+			return nil, errors.New(string(body))
+		}
+
+		bu = string(body)
+	}
+
+	var body DrawBody
+	if err := json.Unmarshal([]byte(gTpl), &body); err != nil {
+		return nil, err
+	}
+	if tpl != "" {
+		if err := json.Unmarshal([]byte(tpl), &body); err != nil {
 			return nil, err
 		}
 	}
@@ -106,7 +127,8 @@ func DrawAI(bu string, prompt string, tpl string) ([]byte, error) {
 	}
 
 	if r.StatusCode != 200 {
-		return nil, errors.New(r.Status)
+		b, _ := io.ReadAll(r.Body)
+		return nil, errors.New(r.Status + "::" + string(b))
 	}
 
 	marshal, err = io.ReadAll(r.Body)
