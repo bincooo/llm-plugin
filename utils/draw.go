@@ -13,7 +13,7 @@ import (
 
 const gTpl = `
 {
-    "enable_hr": true,
+    "enable_hr": false,
     "hr_scale": 2,
     "hr_upscaler": "4x-UltraSharp",
     "hr_second_pass_steps": 15,
@@ -74,16 +74,23 @@ type DrawBody struct {
 
 func DrawAI(bu string, prompt string, tpl string) ([]byte, error) {
 	var body DrawBody
-	t := strings.Replace(gTpl, "[prompt]", prompt, -1)
-	if err := json.Unmarshal([]byte(t), &body); err != nil {
-		return nil, err
-	}
-
 	if tpl != "" {
-		tpl = strings.Replace(tpl, "[prompt]", prompt, -1)
 		if err := json.Unmarshal([]byte(tpl), &body); err != nil {
 			return nil, err
 		}
+	} else {
+		if err := json.Unmarshal([]byte(gTpl), &body); err != nil {
+			return nil, err
+		}
+	}
+
+	prompt = strings.ReplaceAll(prompt, "\"", "")
+	prompt = strings.ReplaceAll(prompt, "，", ",")
+
+	if strings.Contains(body.Prompt, "[prompt]") {
+		body.Prompt = strings.Replace(body.Prompt, "[prompt]", prompt, -1)
+	} else {
+		body.Prompt += prompt
 	}
 
 	marshal, err := json.Marshal(body)
