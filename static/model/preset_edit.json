@@ -154,6 +154,10 @@
           {
             "value": "poe",
             "label": "poe"
+          },
+          {
+            "value": "dify",
+            "label": "dify"
           }
         ],
         "required": false,

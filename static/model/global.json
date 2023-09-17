@@ -194,6 +194,10 @@
                       {
                         "value": "claude-web",
                         "label": "claude-web"
+                      },
+                      {
+                        "value": "dify",
+                        "label": "dify"
                       }
                     ],
                     "required": false,
