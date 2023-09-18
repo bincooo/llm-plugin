@@ -191,6 +191,7 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 
 	if tokens[0].BaseURL != "" {
 		cctx.BaseURL = tokens[0].BaseURL
+		logrus.Infoln("[MiaoX] - AI转发地址： ", cctx.BaseURL)
 	}
 
 	args.TokenId = tokens[0].Id
