@@ -137,9 +137,12 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 	}
 
 	if bot == vars.OpenAIAPI {
-		// 检查余额
-		if e := checkApiOpenai(*tokens[0], global.Proxy); e != nil {
-			return cctx, e
+		//	// 检查余额
+		//	if e := checkApiOpenai(*tokens[0], global.Proxy); e != nil {
+		//		return cctx, e
+		//	}
+		if tokens[0].AppId != "" {
+			cctx.Model = tokens[0].AppId
 		}
 	}
 
@@ -149,13 +152,12 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 		if err := checkWebOpenai(tokens[0], global.Proxy); err != nil {
 			return cctx, err
 		}
-
-		// 为空，尝试登陆
-		if tokens[0].Token == "" {
-			if err := loginWebOpenai(*tokens[0], global); err != nil {
-				return cctx, err
-			}
-		}
+		//// 为空，尝试登陆
+		//if tokens[0].Token == "" {
+		//	if err := loginWebOpenai(*tokens[0], global); err != nil {
+		//		return cctx, err
+		//	}
+		//}
 	}
 
 	if bot == vars.Claude {
