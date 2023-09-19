@@ -119,9 +119,15 @@ func DrawAI(proxy, bu, prompt, tpl string) ([]byte, error) {
 		return nil, err
 	}
 
+	np := false
+	if strings.HasPrefix(bu, "proxy:") {
+		np = true
+		bu = bu[6:]
+	}
+
 	builder := utils.NewHttp().POST(bu+"/sdapi/v1/txt2img", bytes.NewReader(marshal)).
 		AddHeader("Content-Type", "application/json")
-	if proxy != "" {
+	if proxy != "" && np {
 		builder.ProxyString(proxy)
 	}
 	r, err := builder.Build()
