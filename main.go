@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 	"github.com/bincooo/edge-api/util"
+	"math/rand"
 	"os"
 	"regexp"
 	"strconv"
@@ -51,6 +52,15 @@ var (
 
 	//mgr types.BotManager
 	lmt autotypes.Limiter
+
+	BB = []string{
+		"太啰嗦了巴嘎 ♪(´ε｀ )",
+		"这么长的文字你让我咋读啊 (*≧ω≦)",
+		"太长了!! 受不了了~ (˶‾᷄ ⁻̫ ‾᷅˵)",
+		"你是想把今天的话一次性说完嘛 ( ；´Д｀)",
+		"简洁一点点吧，求求了 _(:_」∠)_",
+		"要不你自己读读看拟写了什么 (╯‵□′)╯︵┻━┻",
+	}
 )
 
 func init() {
@@ -128,7 +138,14 @@ func conversationCommand(ctx *zero.Ctx) {
 		return
 	}
 
-	cctx.Prompt = parseMessage(ctx)
+	prompt := parseMessage(ctx)
+	// 限制对话长度
+	str := []rune(prompt)
+	if len(str) > 2000 {
+		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(BB[rand.Intn(len(BB))]))
+		return
+	}
+	cctx.Prompt = prompt
 	args := cctx.Data.(types.ConversationContextArgs)
 	args.Current = strconv.FormatInt(ctx.Event.Sender.ID, 10)
 	args.Nickname = ctx.Event.Sender.NickName
