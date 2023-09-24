@@ -85,6 +85,8 @@ func init() {
 		Handle(deleteTokenCommand)
 	engine.OnFullMatch("凭证列表", zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(tokensCommand)
+	engine.OnRegex(`^切换凭证\s(\S+)`, zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+		Handle(switchTokensCommand)
 	engine.OnRegex(`[开启|切换]预设\s(\S+)`, zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(enablePresetSceneCommand)
 	engine.OnRegex(`切换AI\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
@@ -264,6 +266,43 @@ func deleteTokenCommand(ctx *zero.Ctx) {
 	}
 	repo.RemoveToken(value)
 	ctx.Send("`" + value + "`已删除")
+}
+
+// 切换AI凭证
+func switchTokensCommand(ctx *zero.Ctx) {
+	value := ctx.State["regex_matched"].([]string)[1]
+	cctx, err := createConversationContext(ctx, "")
+	if err != nil {
+		ctx.Send("获取上下文出错: " + err.Error())
+		return
+	}
+
+	tokenType := cctx.Bot
+	if cctx.Bot == xvars.Claude && cctx.Model == claudevars.Model4WebClaude2 {
+		tokenType = xvars.Claude + "-web"
+	}
+
+	token := repo.GetToken("", value, tokenType)
+	if token == nil {
+		ctx.Send("`" + value + "`凭证不存在")
+		return
+	}
+
+	if tokenType != token.Type {
+		ctx.Send("当前AI类型无法使用`" + value + "`凭证")
+		return
+	}
+
+	bot := cctx.Bot
+	if bot == Poe {
+		bot = xvars.OpenAIAPI
+	}
+
+	cctx.Token = token.Token
+	lmt.Remove(cctx.Id, bot)
+	store.DeleteOnline(cctx.Id)
+	updateConversationContext(cctx)
+	ctx.Send("已切换`" + value + "`凭证")
 }
 
 // 凭证列表
