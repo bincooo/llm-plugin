@@ -88,7 +88,7 @@ func init() {
 	engine.OnRegex(`^切换凭证\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTokensCommand)
 	engine.OnRegex(`[开启|切换]预设\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
-		Handle(enablePresetSceneCommand)
+		Handle(switchPresetSceneCommand)
 	engine.OnRegex(`切换AI\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(switchAICommand)
 	engine.OnFullMatch("预设列表", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
@@ -138,7 +138,6 @@ func conversationCommand(ctx *zero.Ctx) {
 	cctx, err := createConversationContext(ctx, "")
 	if err != nil {
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("发生异常: "+err.Error()))
-		go handleBingCaptcha(cctx.Token, err)
 		return
 	}
 
@@ -286,7 +285,7 @@ func switchTokensCommand(ctx *zero.Ctx) {
 
 	token := repo.GetToken("", value, tokenType)
 	if token == nil {
-		ctx.Send("`" + value + "`凭证不存在")
+		ctx.Send("`" + cctx.Bot + "`的`" + value + "`凭证不存在")
 		return
 	}
 
@@ -300,7 +299,14 @@ func switchTokensCommand(ctx *zero.Ctx) {
 		bot = xvars.OpenAIAPI
 	}
 
+	args := cctx.Data.(types.ConversationContextArgs)
+	args.TokenId = token.Id
+	cctx.Data = args
 	cctx.Token = token.Token
+	if token.BaseURL != "" {
+		cctx.BaseURL = token.BaseURL
+	}
+
 	lmt.Remove(cctx.Id, bot)
 	store.DeleteOnline(cctx.Id)
 	updateConversationContext(cctx)
@@ -326,7 +332,7 @@ func tokensCommand(ctx *zero.Ctx) {
 }
 
 // 开启/切换预设
-func enablePresetSceneCommand(ctx *zero.Ctx) {
+func switchPresetSceneCommand(ctx *zero.Ctx) {
 	value := ctx.State["regex_matched"].([]string)[1]
 
 	cctx, err := createConversationContext(ctx, "")
@@ -350,6 +356,10 @@ func enablePresetSceneCommand(ctx *zero.Ctx) {
 		ctx.Send("当前AI类型无法使用`" + value + "`预设")
 		return
 	}
+
+	args := cctx.Data.(types.ConversationContextArgs)
+	args.PresetId = presetScene.Id
+	cctx.Data = args
 
 	cctx.Preset = presetScene.Content
 	cctx.Format = presetScene.Message

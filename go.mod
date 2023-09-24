@@ -7,8 +7,8 @@ require (
 	github.com/FloatTech/sqlite v1.6.2
 	github.com/FloatTech/zbpctrl v1.5.3-0.20230514154630-b74e6fcca380
 	github.com/FloatTech/zbputils v1.6.2-0.20230514154857-9363fdb11fd6
-	github.com/bincooo/AutoAI v1.0.12-pre.0.20230921111838-a3f330ab22a5
-	github.com/bincooo/claude-api v1.0.3-0.20230914004001-9028288fb897
+	github.com/bincooo/AutoAI v1.0.12-pre2.0.20230924170957-b9d508382277
+	github.com/bincooo/claude-api v1.0.3-0.20230922175803-2c4b4bc1de48
 	github.com/bincooo/edge-api v1.0.1-0.20230917124402-3fc415e5b4b3
 	github.com/bincooo/openai-wapi v1.0.1-0.20230717215411-79a74f385b4f
 	github.com/gin-gonic/gin v1.9.1
@@ -25,7 +25,7 @@ require (
 	github.com/RomiChan/websocket v1.4.3-0.20220227141055-9b2c6168c9c5 // indirect
 	github.com/acheong08/OpenAIAuth v0.0.0-20230625142757-7b01ccd04f63 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
-	github.com/bincooo/dify-sdk-go v0.0.0-20230917134437-1c2232d86d4d // indirect
+	github.com/bincooo/dify-sdk-go v0.0.0-20230921133309-1203dccbe917 // indirect
 	github.com/bincooo/requests v0.0.0-20230720064210-7eae5d6c9d1e // indirect
 	github.com/bitly/go-simplejson v0.5.0 // indirect
 	github.com/bogdanfinn/fhttp v0.5.19 // indirect
@@ -52,8 +52,7 @@ require (
 	github.com/go-playground/validator/v10 v10.14.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
-	github.com/google/uuid v1.3.0 // indirect
-	github.com/jinzhu/copier v0.3.5 // indirect
+	github.com/google/uuid v1.3.1 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.15.15 // indirect
@@ -69,7 +68,7 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20220927061507-ef77025ab5aa // indirect
 	github.com/samber/go-gpt-3-encoder v0.3.1 // indirect
 	github.com/samber/lo v1.37.0 // indirect
-	github.com/sashabaranov/go-openai v1.12.0 // indirect
+	github.com/sashabaranov/go-openai v1.15.3 // indirect
 	github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
