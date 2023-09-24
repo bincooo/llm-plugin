@@ -79,26 +79,28 @@ func init() {
 		panic(e)
 	}
 
-	engine.OnRegex(`^添加凭证\s+(\S+)`, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^添加凭证\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(insertTokenCommand)
-	engine.OnRegex(`^删除凭证\s+(\S+)`, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^删除凭证\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(deleteTokenCommand)
-	engine.OnFullMatch("凭证列表", zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnFullMatch("凭证列表", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(tokensCommand)
-	engine.OnRegex(`^切换凭证\s(\S+)`, zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnRegex(`^切换凭证\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTokensCommand)
-	engine.OnRegex(`[开启|切换]预设\s(\S+)`, zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnRegex(`[开启|切换]预设\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(enablePresetSceneCommand)
 	engine.OnRegex(`切换AI\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(switchAICommand)
-	engine.OnFullMatch("预设列表", zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnFullMatch("预设列表", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(presetScenesCommand)
 	engine.OnPrefix("作画", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(drawCommand)
 	engine.OnFullMatch("历史对话", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(historyCommand)
-	engine.OnMessage(zero.OnlyToMe, repo.OnceOnSuccess, excludeOnMessage).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnRegex(".+", zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
+	//engine.OnMessage(zero.OnlyToMe, repo.OnceOnSuccess, excludeOnMessage).SetBlock(true).Limit(ctxext.LimitByUser).
+	//	Handle(conversationCommand)
 
 	cmd.Register("/api/global", repo.GlobalService{}, cmd.NewMenu("global", "全局配置"))
 	cmd.Register("/api/preset", repo.PresetService{}, cmd.NewMenu("preset", "预设配置"))
