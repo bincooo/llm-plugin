@@ -97,7 +97,7 @@ func init() {
 		Handle(drawCommand)
 	engine.OnFullMatch("历史对话", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(historyCommand)
-	engine.OnRegex(".+", zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnRegex(".+", zero.OnlyToMe, repo.OnceOnSuccess, excludeOnMessage).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
 	//engine.OnMessage(zero.OnlyToMe, repo.OnceOnSuccess, excludeOnMessage).SetBlock(true).Limit(ctxext.LimitByUser).
 	//	Handle(conversationCommand)
