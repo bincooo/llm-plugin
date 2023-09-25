@@ -112,7 +112,7 @@ func init() {
 // 自定义优先级
 func excludeOnMessage(ctx *zero.Ctx) bool {
 	msg := ctx.MessageString()
-	exclude := []string{"添加凭证 ", "删除凭证 ", "凭证列表", "开启预设 ", "切换预设 ", "预设列表", "历史对话", "切换AI ", "作画", "/", "!"}
+	exclude := []string{"添加凭证 ", "删除凭证 ", "凭证列表", "切换凭证", "开启预设 ", "切换预设 ", "预设列表", "历史对话", "切换AI ", "作画", "/", "!"}
 	for _, value := range exclude {
 		if strings.HasPrefix(msg, value) {
 			return false
