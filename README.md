@@ -1,5 +1,88 @@
+## 描述
+
+这是`ZeroBot-Plugin`的一个AI接入插件，集成了`openai-api` 、`openai-web`、 `BingAI`、`claude`、`dify`
+
+内部实现了等待对话，web可视化配置。拦截链实现：内置了`cahce`（对话缓存）、`tmpl`（模板引擎）
+
+---
+
+### 模板引擎：
+
+`web`页`预设配置`，在处理器一栏中填写`tmpl`即可使用。
+
+`消息模版`、`预设模版` 这两栏可以使用模板引擎
+
+》》》使用示例 《《《
+
+变量使用：
+
+```json
+{
+    "args": {
+        "Current": "[QQ]",
+        "Nickname": "[qq昵称]"
+    },
+    "online": [
+        {
+						"id": "[在线的QQ]",
+          	"name": "[在线的qq昵称]"
+        },
+      	...
+    ],
+    "date": "[当前日期]",
+    "content": "[当前用户对话]"
+}
+```
+
+模版：
+
+```tex
+(你的主人是折戟沉沙，当前与你对话的是{{.args.Nickname}}，回复下面对话)
+{{.args.Nickname}}: “{{.content}}”
+```
+
+结果：
+
+```tex
+(你的主人是折戟沉沙，当前与你对话的是鲁迪斯，回复下面对话)
+鲁迪斯: “你好啊，喵小爱”
+```
+
+
+
+
+
+逻辑运算：
+
+模版：
+
+```tex
+(你的主人是折戟沉沙，当前与你对话的是{{.args.Nickname}}{{if ne .args.Current "1263212xxx"}}但不是你的主人{{end}}，回复下面对话)
+{{.args.Nickname}}: “{{.content}}”
+```
+
+结果：
+
+```tex
+(你的主人是折戟沉沙，当前与你对话的是鲁迪斯但不是你的主人，回复下面对话)
+鲁迪斯: “你好啊，喵小爱”
+```
+
+
+
+
+
+模版语法：【无】
+
+自行查阅资料...
+
+[模板if判断、传(map_arr切片)数据渲染](https://blog.csdn.net/u013210620/article/details/78525369)
+
+---
+
 step 1:
 在`ZeroBot-Plugin`的`main.go`中导入包
+
 ```go
 import (
     llm "github.com/bincooo/llm-plugin"
@@ -8,6 +91,7 @@ import (
 
 setp 2:
 在`ZeroBot-Plugin`的`main.go`大概在263行处添加`llm.Run(":8081")`
+
 ```go
 // 启用 webui
 // go webctrl.RunGui(*g)
