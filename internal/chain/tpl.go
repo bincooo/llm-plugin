@@ -26,18 +26,22 @@ func (*TplInterceptor) Before(bot autotypes.Bot, ctx *autotypes.ConversationCont
 		"date":    time.Now().Format("2006-01-02 15:04:05"),
 	}
 
-	result, err := tplHandle(ctx.Prompt, kv)
-	if err != nil {
-		return false, err
+	if ctx.Format != "" {
+		result, err := tplHandle(ctx.Format, kv)
+		if err != nil {
+			return false, err
+		}
+		ctx.Prompt = result
 	}
-	ctx.Prompt = result
 
-	delete(kv, "content")
-	result, err = tplHandle(ctx.Preset, kv)
-	if err != nil {
-		return false, err
+	if ctx.Preset != "" {
+		delete(kv, "content")
+		result, err := tplHandle(ctx.Preset, kv)
+		if err != nil {
+			return false, err
+		}
+		ctx.Preset = result
 	}
-	ctx.Preset = result
 	return true, nil
 }
 
