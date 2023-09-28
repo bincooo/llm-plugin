@@ -72,7 +72,7 @@ func init() {
 	}
 
 	lmt = AutoAI.NewCommonLimiter()
-	if e := lmt.RegChain("args", &chain.ArgsInterceptor{}); e != nil {
+	if e := lmt.RegChain("tmpl", &chain.TplInterceptor{}); e != nil {
 		panic(e)
 	}
 	if e := lmt.RegChain("online", &chain.OnlineInterceptor{}); e != nil {
