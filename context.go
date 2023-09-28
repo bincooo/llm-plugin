@@ -27,7 +27,7 @@ var (
 
 const (
 	Poe       = "poe"
-	BaseChain = "replace,cache,args,"
+	BaseChain = ""
 )
 
 func deleteConversationContext(ctx *zero.Ctx) {
