@@ -7,7 +7,7 @@ require (
 	github.com/FloatTech/sqlite v1.6.2
 	github.com/FloatTech/zbpctrl v1.5.3-0.20230514154630-b74e6fcca380
 	github.com/FloatTech/zbputils v1.6.2-0.20230514154857-9363fdb11fd6
-	github.com/bincooo/AutoAI v1.0.12-pre2.0.20230928000701-ed5efb1ec0cf
+	github.com/bincooo/AutoAI v1.0.12-pre2.0.20230930124753-68d4e408bfdb
 	github.com/bincooo/claude-api v1.0.3-0.20230924172829-449a6a50ba86
 	github.com/bincooo/edge-api v1.0.1-0.20230917124402-3fc415e5b4b3
 	github.com/bincooo/openai-wapi v1.0.1-0.20230717215411-79a74f385b4f
