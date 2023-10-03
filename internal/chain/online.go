@@ -16,13 +16,13 @@ func (*OnlineInterceptor) Before(bot autotypes.Bot, ctx *autotypes.ConversationC
 	online := store.GetOnline(ctx.Id)
 	args := ctx.Data.(types.ConversationContextArgs)
 	// 如果已在线列表中，先删除后加入到结尾
-	for i, ol := range online {
-		if ol["id"] != args.Current {
+	for i, o := range online {
+		if o.Id != args.Current {
 			continue
 		}
 
 		if len(online) == 1 {
-			online = make([]map[string]string, 0)
+			online = make([]store.OKv, 0)
 		} else {
 			online = append(online[:i], online[i+1:]...)
 		}
@@ -31,9 +31,9 @@ func (*OnlineInterceptor) Before(bot autotypes.Bot, ctx *autotypes.ConversationC
 	}
 
 	// 加入在线列表
-	online = append(online, map[string]string{
-		"id":   args.Current,
-		"name": args.Nickname,
+	online = append(online, store.OKv{
+		Id:   args.Current,
+		Name: args.Nickname,
 	})
 
 	// 控制最大在线人数

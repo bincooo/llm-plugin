@@ -1,11 +1,12 @@
 package utils
 
 import (
+	"github.com/bincooo/llm-plugin/internal/repo/store"
 	"github.com/bincooo/llm-plugin/vars"
+	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"github.com/wdvxdr1123/ZeroBot/message"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,37 +16,49 @@ var (
 	waitTimeout = 3 * time.Second
 )
 
-func StringToMessageSegment(msg string) []message.MessageSegment {
+func StringToMessageSegment(uid, msg string) []message.MessageSegment {
 	msg = removeUrlBlock(msg)
-	// 转换消息对象Chain
-	pattern := `\[@[0-9]{5,}\]`
-	r, _ := regexp.Compile(pattern)
-	matches := r.FindStringSubmatch(msg)
 
+	// 转换消息对象Chain
+	msg = strings.ReplaceAll(msg, "&#91;", "[")
+	msg = strings.ReplaceAll(msg, "&#93;", "]")
+
+	compileRegex := regexp.MustCompile(`\[@[^]]+]`)
+	matches := compileRegex.FindAllStringSubmatch(msg, -1)
+	logrus.Info("StringToMessageSegment CQ:At:: ", matches)
 	pos := 0
-	var slice []message.MessageSegment
+	online := store.GetOnline(uid)
+
 	for _, mat := range matches {
-		qq := strings.TrimPrefix(strings.TrimSuffix(mat, "]"), "[@")
-		index := strings.Index(msg[pos:], mat)
+		if len(mat) == 0 {
+			continue
+		}
+
+		qq := strings.TrimPrefix(strings.TrimSuffix(mat[0], "]"), "[@")
+		qq = strings.TrimSpace(qq)
+		if qq == "" {
+			continue
+		}
+
+		index := strings.Index(msg[pos:], mat[0])
 		if index < 0 {
 			continue
 		}
 
-		slice = append(slice, message.Text(msg[pos:index]))
-		pos = index + len(qq) + 3
-		at, err := strconv.ParseInt(strings.TrimSpace(qq), 10, 64)
-		if err != nil {
-			continue
+		contain := ContainFor(online, func(item store.OKv) bool {
+			if item.Name == qq {
+				qq = item.Id
+			}
+			return item.Id == qq
+		})
+
+		if contain {
+			strings.Replace(msg, "[@"+qq+"]", "[CQ:at,qq="+qq+"]", pos)
 		}
-
-		slice = append(slice, message.At(at))
+		pos = index + len(qq) + 3
 	}
 
-	if len(msg)-1 > pos {
-		slice = append(slice, message.Text(msg[pos:]))
-	}
-
-	return slice
+	return message.ParseMessageFromString(msg)
 }
 
 func removeUrlBlock(msg string) string {
@@ -54,6 +67,33 @@ func removeUrlBlock(msg string) string {
 	regexCompile = regexp.MustCompile(`\[\^[0-9]\^\^`)
 	return regexCompile.ReplaceAllString(msg, "...")
 }
+
+// 判断切片是否包含子元素
+func Contains[T comparable](slice []T, t T) bool {
+	if len(slice) == 0 {
+		return false
+	}
+
+	return ContainFor(slice, func(item T) bool {
+		return item == t
+	})
+}
+
+// 判断切片是否包含子元素， condition：自定义判断规则
+func ContainFor[T comparable](slice []T, condition func(item T) bool) bool {
+	if len(slice) == 0 {
+		return false
+	}
+
+	for idx := 0; idx < len(slice); idx++ {
+		if condition(slice[idx]) {
+			return true
+		}
+	}
+	return false
+}
+
+// ========================================
 
 func NewDelay(ctx *zero.Ctx) *Delay {
 	d := Delay{t: time.Now().Add(waitTimeout), closed: false, ctx: ctx}

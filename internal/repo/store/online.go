@@ -2,14 +2,17 @@ package store
 
 import "sync"
 
-type onlineKv = map[string]string
+type OKv struct {
+	Id   string
+	Name string
+}
 
 var (
 	onlineMu    sync.RWMutex
-	onlineStore = make(map[string][]onlineKv)
+	onlineStore = make(map[string][]OKv)
 )
 
-func CacheOnline(uid string, messages []onlineKv) {
+func CacheOnline(uid string, messages []OKv) {
 	onlineMu.Lock()
 	defer onlineMu.Unlock()
 	onlineStore[uid] = messages
@@ -21,9 +24,9 @@ func DeleteOnline(uid string) {
 	delete(onlineStore, uid)
 }
 
-func GetOnline(uid string) []onlineKv {
+func GetOnline(uid string) []OKv {
 	if result, ok := onlineStore[uid]; ok {
 		return result
 	}
-	return make([]onlineKv, 0)
+	return make([]OKv, 0)
 }
