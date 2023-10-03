@@ -165,7 +165,7 @@ func conversationCommand(ctx *zero.Ctx) {
 		}
 
 		if len(response.Message) > 0 {
-			segment := utils.StringToMessageSegment(response.Message)
+			segment := utils.StringToMessageSegment(cctx.Id, response.Message)
 			ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
 			delay.Defer()
 		}
