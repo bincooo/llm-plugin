@@ -7,6 +7,7 @@ import (
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"github.com/wdvxdr1123/ZeroBot/message"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -28,6 +29,7 @@ func StringToMessageSegment(uid, msg string) []message.MessageSegment {
 	logrus.Info("StringToMessageSegment CQ:At:: ", matches)
 	pos := 0
 	online := store.GetOnline(uid)
+	var slice []message.MessageSegment
 
 	for _, mat := range matches {
 		if len(mat) == 0 {
@@ -40,8 +42,8 @@ func StringToMessageSegment(uid, msg string) []message.MessageSegment {
 			continue
 		}
 
-		index := strings.Index(msg[pos:], mat[0])
-		if index < 0 {
+		index := strings.Index(msg, mat[0])
+		if index < 0 || index <= pos {
 			continue
 		}
 
@@ -53,12 +55,21 @@ func StringToMessageSegment(uid, msg string) []message.MessageSegment {
 		})
 
 		if contain {
-			strings.Replace(msg, "[@"+qq+"]", "[CQ:at,qq="+qq+"]", pos)
+			slice = append(slice, message.Text(msg[pos:index]))
+			pos = index + len(qq) + 3
+			at, err := strconv.ParseInt(strings.TrimSpace(qq), 10, 64)
+			if err != nil {
+				continue
+			}
+			slice = append(slice, message.At(at))
 		}
-		pos = index + len(qq) + 3
 	}
 
-	return message.ParseMessageFromString(msg)
+	if len(msg)-1 > pos {
+		slice = append(slice, message.Text(msg[pos:]))
+	}
+
+	return slice
 }
 
 func removeUrlBlock(msg string) string {
