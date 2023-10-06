@@ -2,17 +2,10 @@ package llm
 
 import (
 	"context"
-	"github.com/bincooo/edge-api/util"
-	"math/rand"
-	"os"
-	"regexp"
-	"strconv"
-	"strings"
-	"time"
-
 	"github.com/FloatTech/zbputils/control"
 	"github.com/FloatTech/zbputils/ctxext"
 	"github.com/bincooo/AutoAI"
+	"github.com/bincooo/edge-api/util"
 	"github.com/bincooo/llm-plugin/cmd"
 	"github.com/bincooo/llm-plugin/internal/chain"
 	"github.com/bincooo/llm-plugin/internal/repo"
@@ -22,6 +15,11 @@ import (
 	"github.com/bincooo/llm-plugin/vars"
 	"github.com/sirupsen/logrus"
 	"github.com/wdvxdr1123/ZeroBot/message"
+	"math/rand"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
 
 	ctrl "github.com/FloatTech/zbpctrl"
 	autostore "github.com/bincooo/AutoAI/store"
@@ -50,7 +48,6 @@ var (
 		PrivateDataFolder: "miaox",
 	})
 
-	//mgr types.BotManager
 	lmt autotypes.Limiter
 
 	BB = []string{
@@ -93,20 +90,14 @@ func init() {
 		Handle(switchAICommand)
 	engine.OnFullMatch("预设列表", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(presetScenesCommand)
-	engine.OnPrefix("作画", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
-		Handle(drawCommand)
 	engine.OnFullMatch("历史对话", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(historyCommand)
 	engine.OnRegex(".+", zero.OnlyToMe, repo.OnceOnSuccess, excludeOnMessage).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
-	//engine.OnMessage(zero.OnlyToMe, repo.OnceOnSuccess, excludeOnMessage).SetBlock(true).Limit(ctxext.LimitByUser).
-	//	Handle(conversationCommand)
 
 	cmd.Register("/api/global", repo.GlobalService{}, cmd.NewMenu("global", "全局配置"))
 	cmd.Register("/api/preset", repo.PresetService{}, cmd.NewMenu("preset", "预设配置"))
 	cmd.Register("/api/token", repo.TokenService{}, cmd.NewMenu("token", "凭证配置"))
-
-	//Run(":8082")
 }
 
 // 自定义优先级
@@ -144,7 +135,7 @@ func conversationCommand(ctx *zero.Ctx) {
 	prompt := parseMessage(ctx)
 	// 限制对话长度
 	str := []rune(prompt)
-	if len(str) > 2000 {
+	if len(str) > 500 {
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(BB[rand.Intn(len(BB))]))
 		return
 	}
@@ -199,33 +190,6 @@ func conversationCommand(ctx *zero.Ctx) {
 	if e := lmt.Join(cctx, lmtHandle); e != nil {
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(e.Error()))
 	}
-}
-
-// AI作画
-func drawCommand(ctx *zero.Ctx) {
-	prompt := ctx.State["args"].(string)
-	if prompt == "" {
-		return
-	}
-
-	prompt = strings.ReplaceAll(prompt, "，", ",")
-	global := repo.GetGlobal()
-	if global.DrawServ == "" {
-		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("请先联系管理员设置AI作画API"))
-		return
-	}
-
-	logrus.Info("接收到作画请求，开始作画：", prompt)
-	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("这就开始画 ~"))
-	beginTime := time.Now()
-	imgBytes, err := utils.DrawAI(global.Proxy, global.DrawServ, prompt, global.DrawBody)
-	if err != nil {
-		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("作画失败："+err.Error()))
-		return
-	}
-
-	seconds := time.Now().Sub(beginTime).Seconds()
-	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.ImageBytes(imgBytes), message.Text("耗时："+strconv.FormatFloat(seconds, 'f', 0, 64)+"s"))
 }
 
 // 添加凭证
