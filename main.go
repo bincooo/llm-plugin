@@ -165,9 +165,12 @@ func conversationCommand(ctx *zero.Ctx) {
 		}
 
 		if len(response.Message) > 0 {
-			segment := utils.StringToMessageSegment(cctx.Id, response.Message)
-			ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
-			delay.Defer()
+			if response.Status == xvars.Closed && strings.TrimSpace(response.Message) == "" {
+			} else {
+				segment := utils.StringToMessageSegment(cctx.Id, response.Message)
+				ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
+				delay.Defer()
+			}
 		}
 		if response.Error != nil {
 			errText := response.Error.Error()
