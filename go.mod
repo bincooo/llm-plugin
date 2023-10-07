@@ -7,9 +7,9 @@ require (
 	github.com/FloatTech/sqlite v1.6.2
 	github.com/FloatTech/zbpctrl v1.5.3-0.20230514154630-b74e6fcca380
 	github.com/FloatTech/zbputils v1.6.2-0.20230514154857-9363fdb11fd6
-	github.com/bincooo/AutoAI v1.0.12-pre2.0.20231006204811-e32a0dd913a2
+	github.com/bincooo/AutoAI v1.0.12-pre2.0.20231007013106-d4782c6cb129
 	github.com/bincooo/claude-api v1.0.3-0.20231006025050-b13fff6295cc
-	github.com/bincooo/edge-api v1.0.1-0.20231006155154-f8a68235adf6
+	github.com/bincooo/edge-api v1.0.1-0.20231007003335-eb74c9a7bb08
 	github.com/bincooo/openai-wapi v1.0.1-0.20230717215411-79a74f385b4f
 	github.com/gin-gonic/gin v1.9.1
 	github.com/sirupsen/logrus v1.9.3
@@ -25,7 +25,6 @@ require (
 	github.com/RomiChan/websocket v1.4.3-0.20220227141055-9b2c6168c9c5 // indirect
 	github.com/acheong08/OpenAIAuth v0.0.0-20230625142757-7b01ccd04f63 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
-	github.com/bincooo/dify-sdk-go v0.0.0-20230921133309-1203dccbe917 // indirect
 	github.com/bincooo/requests v0.0.0-20230720064210-7eae5d6c9d1e // indirect
 	github.com/bitly/go-simplejson v0.5.0 // indirect
 	github.com/bogdanfinn/fhttp v0.5.19 // indirect
