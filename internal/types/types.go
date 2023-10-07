@@ -28,4 +28,6 @@ type ConversationContextArgs struct {
 
 	TokenId  string
 	PresetId string
+
+	Tts string
 }

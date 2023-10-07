@@ -48,6 +48,8 @@ var (
 		PrivateDataFolder: "miaox",
 	})
 
+	tts TTSMaker
+
 	lmt autotypes.Limiter
 
 	BB = []string{
@@ -67,6 +69,9 @@ func init() {
 	if vars.Loading, err = os.ReadFile(vars.E.DataFolder() + "/load.gif"); err != nil {
 		panic(err)
 	}
+
+	// init tts
+	tts.Reg("Edge", &_edgeTts{})
 
 	lmt = AutoAI.NewCommonLimiter()
 	if e := lmt.RegChain("tmpl", &chain.TplInterceptor{}); e != nil {
@@ -92,6 +97,10 @@ func init() {
 		Handle(presetScenesCommand)
 	engine.OnFullMatch("历史对话", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(historyCommand)
+	engine.OnRegex(`语音列表`, zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+		Handle(ttsCommand)
+	engine.OnRegex(`[开启|切换]语音\s(\S+)`, zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+		Handle(switchTTSCommand)
 	engine.OnRegex(".+", zero.OnlyToMe, repo.OnceOnSuccess, excludeOnMessage).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
 
@@ -117,6 +126,30 @@ func historyCommand(ctx *zero.Ctx) {
 	messages := autostore.GetMessages(key)
 	logrus.Info(messages)
 	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已在后台打印"))
+}
+
+// 语音列表
+func ttsCommand(ctx *zero.Ctx) {
+	ctx.SendChain(message.Text(tts.Echo()))
+}
+
+// 开启语音
+func switchTTSCommand(ctx *zero.Ctx) {
+	key := ctx.State["regex_matched"].([]string)[1]
+	value := ctx.State["regex_matched"].([]string)[1]
+
+	if !tts.ContainTone(key, value) {
+		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("不支持的语音类型: "+key+"/"+value))
+		return
+	}
+
+	cctx, err := createConversationContext(ctx, "")
+	if err != nil {
+		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("发生异常: "+err.Error()))
+		return
+	}
+	args := cctx.Data.(types.ConversationContextArgs)
+	args.Tts = key + "/" + value
 }
 
 // 聊天
@@ -158,11 +191,30 @@ func conversationCommand(ctx *zero.Ctx) {
 		if len(response.Message) > 0 {
 			if response.Status == xvars.Closed && strings.TrimSpace(response.Message) == "" {
 			} else {
-				segment := utils.StringToMessageSegment(cctx.Id, response.Message)
-				ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
-				delay.Defer()
+				if args.Tts == "" {
+					segment := utils.StringToMessageSegment(cctx.Id, response.Message)
+					ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
+					delay.Defer()
+				} else {
+					// 使用线程，解除阻塞
+					slice := strings.Split(args.Tts, "/")
+					msg := strings.TrimSpace(response.Message)
+					if msg == "" {
+						goto label
+					}
+					go func() {
+						audio, e := tts.Audio(slice[0], slice[1], response.Message)
+						if e != nil {
+							ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("生成语音失败："+e.Error()))
+						} else {
+							ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Record(audio))
+						}
+					}()
+				label:
+				}
 			}
 		}
+
 		if response.Error != nil {
 			errText := response.Error.Error()
 			go handleBingCaptcha(cctx.Token, response.Error)
@@ -376,8 +428,7 @@ func switchAICommand(ctx *zero.Ctx) {
 		Poe + "-gpt4",
 		Poe + "-gpt4-32k",
 		Poe + "-claude+",
-		Poe + "-claude100k",
-		xvars.Dify:
+		Poe + "-claude100k":
 		deleteConversationContext(ctx)
 		c, err := createConversationContext(ctx, bot)
 		if err != nil {
