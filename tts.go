@@ -1,18 +1,49 @@
 package llm
 
 import (
-	"encoding/base64"
 	"errors"
 	"github.com/FloatTech/floatbox/file"
 	"github.com/bincooo/llm-plugin/utils"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	edgetts "github.com/pp-group/edge-tts-go"
 	edgebiz "github.com/pp-group/edge-tts-go/biz/service/tts/edge"
+)
+
+var (
+	Xieyin = map[string]string{
+		"a": "`诶`",
+		"b": "`必`",
+		"c": "`西`",
+		"d": "`地`",
+		"e": "`亿`",
+		"f": "`哎辅`",
+		"g": "`计`",
+		"h": "`哎曲`",
+		"i": "`爱`",
+		"j": "`戒`",
+		"k": "`剋`",
+		"l": "`哎乐`",
+		"m": "`哎母`",
+		"o": "`欧`",
+		"p": "`批`",
+		"q": "`扣`",
+		"r": "`啊`",
+		"s": "`哎死`",
+		"t": "`踢`",
+		"u": "`优`",
+		"v": "`微`",
+		"w": "`答不留`",
+		"x": "`爱克斯`",
+		"y": "`歪`",
+		"z": "`贼`",
+	}
 )
 
 type TTSMaker struct {
@@ -21,7 +52,7 @@ type TTSMaker struct {
 
 type ttsApi interface {
 	// 文本转语音
-	Audio(tone, tex string) (string, error)
+	Audio(tone, tex string) ([]string, error)
 	// 语音风格列表
 	Tones() []string
 }
@@ -33,12 +64,12 @@ func (maker *TTSMaker) Reg(k string, api ttsApi) {
 	maker.kv[k] = api
 }
 
-func (maker *TTSMaker) Audio(k, tone, tex string) (string, error) {
+func (maker *TTSMaker) Audio(k, tone, tex string) ([]string, error) {
 	logrus.Info("开始文本转语音: ", k, tone)
 	if api, ok := maker.kv[k]; ok {
 		return api.Audio(tone, tex)
 	} else {
-		return "", errors.New("未定义的语音api类型")
+		return nil, errors.New("未定义的语音api类型")
 	}
 }
 
@@ -66,31 +97,31 @@ type _edgeTts struct {
 }
 
 // 文本转语音
-func (tts *_edgeTts) Audio(tone, tex string) (string, error) {
+func (tts *_edgeTts) Audio(tone, tex string) ([]string, error) {
 	communicate, err := edgebiz.NewCommunicate(tex, edgebiz.Option{
 		OptID: 1,
 		Param: tone,
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	speech, err := edgetts.NewLocalSpeech(communicate, "data")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	_, exec := speech.GenTTS()
 	if err = exec(); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	path, err := speech.URL(speech.FileName)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return "file:///" + file.BOTPATH + "/" + path, nil
+	return []string{"file:///" + file.BOTPATH + "/" + path}, nil
 }
 
 // 语音风格列表
@@ -107,23 +138,52 @@ type _genshinvoice struct {
 }
 
 // 文本转语音
-func (tts *_genshinvoice) Audio(tone, tex string) (string, error) {
-	response, err := http.Get(genshinvoiceBaseUrl + "?speaker=" + url.QueryEscape(tone) + "&text=" + url.QueryEscape(tex) +
-		"&format=wav&noise=0.9&noisew=0.9&sdp_ratio=0.2")
-	if err != nil {
-		logrus.Error("语音生成失败: ", err)
-		return "", errors.New("生成失败")
+func (tts *_genshinvoice) Audio(tone, tex string) ([]string, error) {
+	slice := make([]string, 0)
+	r := []rune(tex)
+
+	count := len(r) / 200
+	if count == 0 {
+		count = 1
+	}
+	if n := len(r) % 205; n > 0 {
+		if n > 5 {
+			count++
+		}
 	}
 
-	if response.StatusCode != http.StatusOK {
-		return "", errors.New("生成失败: " + response.Status)
+	for i := 0; i < count; i++ {
+		msg := tex[i*200 : i*200+200]
+		if i*200+200+5 == len(tex) {
+			msg = tex[i*200 : i*200+200+5]
+		}
+		response, err := http.Get(genshinvoiceBaseUrl + "?speaker=" + url.QueryEscape(tone) + "&text=" + url.QueryEscape(msg) +
+			"&format=wav&noise=0.9&noisew=0.9&sdp_ratio=0.2")
+		if err != nil {
+			logrus.Error("语音生成失败: ", err)
+			return nil, errors.New("生成失败")
+		}
+
+		if response.StatusCode != http.StatusOK {
+			return nil, errors.New("生成失败: " + response.Status)
+		}
+
+		audio, err := io.ReadAll(response.Body)
+		if err != nil {
+			return nil, errors.New("生成失败")
+		}
+
+		if strings.Contains(response.Header.Get("Content-Type"), "text/html") {
+			return nil, errors.New(string(audio))
+		}
+		wav := "data/genshivoice_" + uuid.NewString() + ".wav"
+		err = os.WriteFile(wav, audio, 0666)
+		if err != nil {
+			return nil, err
+		}
+		slice = append(slice, wav)
 	}
-	audio, err := io.ReadAll(response.Body)
-	if err != nil {
-		return "", errors.New("生成失败")
-	}
-	b64 := "base64://" + base64.StdEncoding.EncodeToString(audio)
-	return b64, nil
+	return slice, nil
 }
 
 // 语音风格列表

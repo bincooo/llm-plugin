@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	ctrl "github.com/FloatTech/zbpctrl"
 	autostore "github.com/bincooo/AutoAI/store"
@@ -237,12 +238,15 @@ func conversationCommand(ctx *zero.Ctx) {
 				slice := strings.Split(args.Tts, "/")
 				msg := strings.TrimSpace(strings.Join(cacheMessage, ""))
 				if msg != "" {
-					audio, e := tts.Audio(slice[0], slice[1], msg)
+					audios, e := tts.Audio(slice[0], slice[1], msg)
 					ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(msg))
 					if e != nil {
 						ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("生成语音失败："+e.Error()))
 					} else {
-						ctx.SendChain(message.Record(audio))
+						for _, audio := range audios {
+							time.Sleep(600 * time.Millisecond)
+							ctx.SendChain(message.Record(audio))
+						}
 					}
 				}
 			}
