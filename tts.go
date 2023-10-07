@@ -144,25 +144,31 @@ func (tts *_genshinvoice) Audio(tone, tex string) ([]string, error) {
 		tex = strings.ReplaceAll(tex, k, v)
 	}
 
+	max := 200
 	slice := make([]string, 0)
 	r := []rune(tex)
 
-	count := len(r) / 200
+	count := len(r) / max
 	if count == 0 {
 		count = 1
 	}
-	if n := len(r) % 205; n > 0 {
+	if n := len(r) % max; n > 0 {
 		if n > 5 {
 			count++
 		}
 	}
 
 	for i := 0; i < count; i++ {
-		msg := tex[i*200 : i*200+200]
-		if i*200+200+5 == len(tex) {
-			msg = tex[i*200 : i*200+200+5]
+		l := len(r)
+		end := i*max + max
+		if end > l {
+			end = l
 		}
-		response, err := http.Get(genshinvoiceBaseUrl + "?speaker=" + url.QueryEscape(tone) + "&text=" + url.QueryEscape(msg) +
+		msg := r[i*max : end]
+		if end+5 >= l {
+			msg = r[i*max : l]
+		}
+		response, err := http.Get(genshinvoiceBaseUrl + "?speaker=" + url.QueryEscape(tone) + "&text=" + url.QueryEscape(string(msg)) +
 			"&format=wav&noise=0.9&noisew=0.9&sdp_ratio=0.2")
 		if err != nil {
 			logrus.Error("语音生成失败: ", err)
