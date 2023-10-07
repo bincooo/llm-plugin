@@ -186,7 +186,7 @@ func (tts *_genshinvoice) Audio(tone, tex string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		slice = append(slice, wav)
+		slice = append(slice, "file:///"+file.BOTPATH+"/"+wav)
 	}
 	return slice, nil
 }
