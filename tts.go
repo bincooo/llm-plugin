@@ -144,7 +144,7 @@ func (tts *_genshinvoice) Audio(tone, tex string) ([]string, error) {
 		tex = strings.ReplaceAll(tex, k, v)
 	}
 
-	max := 200
+	max := 180
 	slice := make([]string, 0)
 	r := []rune(tex)
 

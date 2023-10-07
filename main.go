@@ -99,8 +99,10 @@ func init() {
 		Handle(presetScenesCommand)
 	engine.OnFullMatch("历史对话", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(historyCommand)
-	engine.OnRegex("语音列表", zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnFullMatch("语音列表", zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(ttsCommand)
+	engine.OnRegex(`关闭语音`, zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+		Handle(closeTTSCommand)
 	engine.OnRegex(`[开启|切换]语音\s(.+)`, zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTTSCommand)
 	engine.OnRegex(".+", zero.OnlyToMe, repo.OnceOnSuccess, excludeOnMessage).SetBlock(true).Limit(ctxext.LimitByUser).
@@ -133,6 +135,20 @@ func historyCommand(ctx *zero.Ctx) {
 // 语音列表
 func ttsCommand(ctx *zero.Ctx) {
 	ctx.SendChain(message.Text(tts.Echo()))
+}
+
+// 关闭语音
+func closeTTSCommand(ctx *zero.Ctx) {
+	cctx, err := createConversationContext(ctx, "")
+	if err != nil {
+		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("发生异常: "+err.Error()))
+		return
+	}
+	args := cctx.Data.(types.ConversationContextArgs)
+	args.Tts = ""
+	cctx.Data = args
+	updateConversationContext(cctx)
+	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("关闭完毕"))
 }
 
 // 开启语音
