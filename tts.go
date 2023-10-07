@@ -139,6 +139,11 @@ type _genshinvoice struct {
 
 // 文本转语音
 func (tts *_genshinvoice) Audio(tone, tex string) ([]string, error) {
+	tex = strings.ToLower(tex)
+	for k, v := range Xieyin {
+		tex = strings.ReplaceAll(tex, k, v)
+	}
+
 	slice := make([]string, 0)
 	r := []rune(tex)
 
