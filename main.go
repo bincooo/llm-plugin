@@ -72,6 +72,7 @@ func init() {
 
 	// init tts
 	tts.Reg("Edge", &_edgeTts{})
+	tts.Reg("genshin", &_genshinvoice{})
 
 	lmt = AutoAI.NewCommonLimiter()
 	if e := lmt.RegChain("tmpl", &chain.TplInterceptor{}); e != nil {
@@ -192,6 +193,7 @@ func conversationCommand(ctx *zero.Ctx) {
 	}
 
 	delay := utils.NewDelay(ctx)
+	cacheMessage := make([]string, 0)
 	lmtHandle := func(response autotypes.PartialResponse) {
 		if response.Status == xvars.Begin {
 			delay.Defer()
@@ -205,22 +207,8 @@ func conversationCommand(ctx *zero.Ctx) {
 					ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
 					delay.Defer()
 				} else {
-					// 使用线程，解除阻塞
-					slice := strings.Split(args.Tts, "/")
-					msg := strings.TrimSpace(response.Message)
-					if msg == "" {
-						goto label
-					}
-					go func() {
-						audio, e := tts.Audio(slice[0], slice[1], response.Message)
-						if e != nil {
-							ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("生成语音失败："+e.Error()))
-						} else {
-							ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Record(audio))
-						}
-						delay.Defer()
-					}()
-				label:
+					// 开启语音就不要用分段响应了
+					cacheMessage = append(cacheMessage, response.Message)
 				}
 			}
 		}
@@ -244,6 +232,20 @@ func conversationCommand(ctx *zero.Ctx) {
 		}
 
 		if response.Status == xvars.Closed {
+			// 开启了语音
+			if args.Tts != "" {
+				slice := strings.Split(args.Tts, "/")
+				msg := strings.TrimSpace(strings.Join(cacheMessage, ""))
+				if msg != "" {
+					audio, e := tts.Audio(slice[0], slice[1], msg)
+					ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(msg))
+					if e != nil {
+						ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("生成语音失败："+e.Error()))
+					} else {
+						ctx.SendChain(message.Record(audio))
+					}
+				}
+			}
 			logrus.Info("[MiaoX] - 结束应答")
 			delay.Close()
 		}
