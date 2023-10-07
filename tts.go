@@ -2,7 +2,9 @@ package llm
 
 import (
 	"errors"
+	"github.com/FloatTech/floatbox/file"
 	"github.com/bincooo/llm-plugin/utils"
+	"github.com/sirupsen/logrus"
 	"strings"
 
 	edgetts "github.com/pp-group/edge-tts-go"
@@ -21,12 +23,16 @@ type ttsApi interface {
 }
 
 func (maker *TTSMaker) Reg(k string, api ttsApi) {
+	if maker.kv == nil {
+		maker.kv = make(map[string]ttsApi)
+	}
 	maker.kv[k] = api
 }
 
 func (maker *TTSMaker) Audio(k, tone, tex string) (string, error) {
+	logrus.Info("开始文本转语音: ", k, tone)
 	if api, ok := maker.kv[k]; ok {
-		return api.Audio(tex, tone)
+		return api.Audio(tone, tex)
 	} else {
 		return "", errors.New("未定义的语音api类型")
 	}
@@ -42,7 +48,7 @@ func (maker *TTSMaker) ContainTone(k, tone string) bool {
 
 func (maker *TTSMaker) Echo() (tex string) {
 	for k, api := range maker.kv {
-		tex += "** " + k + " **\n" + strings.Join(api.Tones(), "\n")
+		tex += "** " + k + " **\n" + strings.Join(api.Tones(), "\n") + "\n\n"
 	}
 	if tex == "" {
 		tex = "none"
@@ -75,12 +81,17 @@ func (tts *_edgeTts) Audio(tone, tex string) (string, error) {
 		return "", err
 	}
 
-	return speech.URL(speech.FileName)
+	path, err := speech.URL(speech.FileName)
+	if err != nil {
+		return "", err
+	}
+
+	return "file:///" + file.BOTPATH + "/" + path, nil
 }
 
 // 语音风格列表
 func (tts *_edgeTts) Tones() []string {
 	return []string{
-		"xxx",
+		"zh-CN-XiaoxiaoNeural",
 	}
 }

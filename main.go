@@ -97,9 +97,9 @@ func init() {
 		Handle(presetScenesCommand)
 	engine.OnFullMatch("历史对话", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(historyCommand)
-	engine.OnRegex(`语音列表`, zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnRegex("语音列表", zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(ttsCommand)
-	engine.OnRegex(`[开启|切换]语音\s(\S+)`, zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnRegex(`[开启|切换]语音\s(.+)`, zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTTSCommand)
 	engine.OnRegex(".+", zero.OnlyToMe, repo.OnceOnSuccess, excludeOnMessage).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
@@ -112,7 +112,7 @@ func init() {
 // 自定义优先级
 func excludeOnMessage(ctx *zero.Ctx) bool {
 	msg := ctx.MessageString()
-	exclude := []string{"添加凭证 ", "删除凭证 ", "凭证列表", "切换凭证", "开启预设 ", "切换预设 ", "预设列表", "历史对话", "切换AI ", "作画", "/", "!"}
+	exclude := []string{"添加凭证 ", "删除凭证 ", "凭证列表", "切换", "开启", "预设列表", "历史对话", "语音列表", "/", "!"}
 	for _, value := range exclude {
 		if strings.HasPrefix(msg, value) {
 			return false
@@ -135,9 +135,15 @@ func ttsCommand(ctx *zero.Ctx) {
 
 // 开启语音
 func switchTTSCommand(ctx *zero.Ctx) {
-	key := ctx.State["regex_matched"].([]string)[1]
-	value := ctx.State["regex_matched"].([]string)[1]
+	matched := ctx.State["regex_matched"].([]string)[1]
+	index := strings.Index(matched, " ")
+	if index <= 0 || len(matched)-1 == index {
+		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("参数不正确: "+matched))
+		return
+	}
 
+	key := strings.TrimSpace(matched[:index])
+	value := strings.TrimSpace(matched[index:])
 	if !tts.ContainTone(key, value) {
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("不支持的语音类型: "+key+"/"+value))
 		return
@@ -150,6 +156,9 @@ func switchTTSCommand(ctx *zero.Ctx) {
 	}
 	args := cctx.Data.(types.ConversationContextArgs)
 	args.Tts = key + "/" + value
+	cctx.Data = args
+	updateConversationContext(cctx)
+	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("开启完毕"))
 }
 
 // 聊天
@@ -209,6 +218,7 @@ func conversationCommand(ctx *zero.Ctx) {
 						} else {
 							ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Record(audio))
 						}
+						delay.Defer()
 					}()
 				label:
 				}
