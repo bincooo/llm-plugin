@@ -3,6 +3,9 @@ package llm
 import (
 	"context"
 	"errors"
+	"github.com/FloatTech/floatbox/web"
+	"github.com/google/uuid"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -252,5 +255,41 @@ func parseMessage(ctx *zero.Ctx) string {
 	text = re.ReplaceAllString(text, "喵~")
 	re = regexp.MustCompile(`汪{2,}`)
 	text = re.ReplaceAllString(text, "汪~")
+	//messages := ctx.Event.Message
+	//for _, msg := range messages {
+	//	if msg.Type != "reply" {
+	//		continue
+	//	}
+	//	replyMessage := ctx.GetMessage(message.NewMessageIDFromString(msg.Data["id"]))
+	//	for _, e := range replyMessage.Elements {
+	//		if e.Type != "image" {
+	//			continue
+	//		}
+	//		// TODO -
+	//	}
+	//	break
+	//}
+
+	i := ctx.State["image_url"]
+	if i != nil {
+		if images, ok := i.([]string); ok && len(images) > 0 {
+			imgdata, err := web.GetData(images[0])
+			if err != nil {
+				logrus.Error(err)
+			} else {
+				path := "data/" + uuid.NewString() + ".jpg"
+				err = os.WriteFile(path, imgdata, 0666)
+				if err != nil {
+					logrus.Error(err)
+				} else {
+					text = "{blob:" + path + "}\n" + text
+					go func() {
+						time.Sleep(30 * time.Second)
+						_ = os.Remove(path)
+					}()
+				}
+			}
+		}
+	}
 	return text
 }

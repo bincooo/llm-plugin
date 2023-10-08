@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	edgetts "github.com/pp-group/edge-tts-go"
 	edgebiz "github.com/pp-group/edge-tts-go/biz/service/tts/edge"
@@ -120,7 +121,10 @@ func (tts *_edgeTts) Audio(tone, tex string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	go func() {
+		time.Sleep(60 * time.Second)
+		_ = os.Remove(path)
+	}()
 	return []string{"file:///" + file.BOTPATH + "/" + path}, nil
 }
 
@@ -149,12 +153,9 @@ func (tts *_genshinvoice) Audio(tone, tex string) ([]string, error) {
 	r := []rune(tex)
 
 	count := len(r) / max
-	if count == 0 {
-		count = 1
-	}
 	if n := len(r) % max; n > 0 {
 		if n > 5 {
-			count++
+			count += 1
 		}
 	}
 
@@ -193,7 +194,12 @@ func (tts *_genshinvoice) Audio(tone, tex string) ([]string, error) {
 			return nil, err
 		}
 		slice = append(slice, "file:///"+file.BOTPATH+"/"+wav)
+		go func() {
+			time.Sleep(60 * time.Second)
+			_ = os.Remove(wav)
+		}()
 	}
+
 	return slice, nil
 }
 

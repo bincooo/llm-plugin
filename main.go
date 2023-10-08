@@ -101,7 +101,7 @@ func init() {
 		Handle(historyCommand)
 	engine.OnFullMatch("语音列表", zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(ttsCommand)
-	engine.OnRegex(`关闭语音`, zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnFullMatch("关闭语音", zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(closeTTSCommand)
 	engine.OnRegex(`[开启|切换]语音\s(.+)`, zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTTSCommand)
