@@ -270,26 +270,41 @@ func parseMessage(ctx *zero.Ctx) string {
 	//	break
 	//}
 
-	i := ctx.State["image_url"]
-	if i != nil {
-		if images, ok := i.([]string); ok && len(images) > 0 {
-			imgdata, err := web.GetData(images[0])
-			if err != nil {
-				logrus.Error(err)
-			} else {
-				path := "data/" + uuid.NewString() + ".jpg"
-				err = os.WriteFile(path, imgdata, 0666)
-				if err != nil {
-					logrus.Error(err)
-				} else {
-					text = "{blob:" + path + "}\n" + text
-					go func() {
-						time.Sleep(30 * time.Second)
-						_ = os.Remove(path)
-					}()
-				}
+	picture := tryPicture(ctx)
+	if picture != "" {
+		imgdata, err := web.GetData(picture)
+		if err != nil {
+			logrus.Error(err)
+			goto label
+		}
+		path := "data/" + uuid.NewString() + ".jpg"
+		err = os.WriteFile(path, imgdata, 0666)
+		if err != nil {
+			logrus.Error(err)
+			goto label
+		}
+		text = "{image:" + path + "}\n" + text
+		go func() {
+			time.Sleep(30 * time.Second)
+			_ = os.Remove(path)
+		}()
+	}
+label:
+	return text
+}
+
+// tryPicture 消息含有图片返回
+func tryPicture(ctx *zero.Ctx) string {
+	var urls []string
+	for _, elem := range ctx.Event.Message {
+		if elem.Type == "image" {
+			if elem.Data["url"] != "" {
+				urls = append(urls, elem.Data["url"])
 			}
 		}
 	}
-	return text
+	if len(urls) > 0 {
+		return urls[0]
+	}
+	return ""
 }
