@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/FloatTech/floatbox/web"
 	"github.com/google/uuid"
+	"github.com/wdvxdr1123/ZeroBot/message"
 	"os"
 	"regexp"
 	"strconv"
@@ -255,20 +256,6 @@ func parseMessage(ctx *zero.Ctx) string {
 	text = re.ReplaceAllString(text, "喵~")
 	re = regexp.MustCompile(`汪{2,}`)
 	text = re.ReplaceAllString(text, "汪~")
-	//messages := ctx.Event.Message
-	//for _, msg := range messages {
-	//	if msg.Type != "reply" {
-	//		continue
-	//	}
-	//	replyMessage := ctx.GetMessage(message.NewMessageIDFromString(msg.Data["id"]))
-	//	for _, e := range replyMessage.Elements {
-	//		if e.Type != "image" {
-	//			continue
-	//		}
-	//		// TODO -
-	//	}
-	//	break
-	//}
 
 	picture := tryPicture(ctx)
 	if picture != "" {
@@ -295,16 +282,21 @@ label:
 
 // tryPicture 消息含有图片返回
 func tryPicture(ctx *zero.Ctx) string {
-	var urls []string
-	for _, elem := range ctx.Event.Message {
-		if elem.Type == "image" {
-			if elem.Data["url"] != "" {
-				urls = append(urls, elem.Data["url"])
+	messages := ctx.Event.Message
+	for _, msg := range messages {
+		if msg.Type != "reply" {
+			continue
+		}
+		replyMessage := ctx.GetMessage(message.NewMessageIDFromString(msg.Data["id"]))
+		for _, e := range replyMessage.Elements {
+			if e.Type != "image" {
+				continue
+			}
+			if u := e.Data["url"]; u != "" {
+				return u
 			}
 		}
-	}
-	if len(urls) > 0 {
-		return urls[0]
+		break
 	}
 	return ""
 }
