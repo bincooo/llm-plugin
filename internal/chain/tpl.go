@@ -20,6 +20,7 @@ func (*TplInterceptor) Before(bot autotypes.Bot, ctx *autotypes.ConversationCont
 	ctxArgs := ctx.Data.(types.ConversationContextArgs)
 	content := strings.ReplaceAll(ctx.Prompt, "\"", "\\u0022")
 	kv := map[string]any{
+		"bot":     ctx.Bot,
 		"content": content,
 		"args":    ctxArgs,
 		"online":  store.GetOnline(ctx.Id),
