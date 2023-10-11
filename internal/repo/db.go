@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"bytes"
 	"errors"
 	"github.com/FloatTech/floatbox/ctxext"
 	sql "github.com/FloatTech/sqlite"
@@ -49,7 +50,31 @@ type PresetScene struct {
 	Content string `db:"content" json:"content"`     // 预设内容
 	Message string `db:"message" json:"message"`     // 消息模版
 	Chain   string `db:"chain" json:"chain"`         // 拦截处理器
-	Section bool   `db:"section" json:"section"`     // 是否分段输出
+	Section B2Int  `db:"section" json:"section"`     // 是否分段输出
+}
+
+// bool转int
+type B2Int int
+
+func (b *B2Int) MarshalJSON() ([]byte, error) {
+	if *b == 1 {
+		return []byte("true"), nil
+	} else {
+		return []byte("false"), nil
+	}
+}
+
+func (b *B2Int) UnmarshalJSON(bt []byte) (err error) {
+	if len(bt) < 4 {
+		return
+	}
+	if bytes.Equal(bt, []byte("true")) {
+		*b = 1
+	}
+	if bytes.Equal(bt, []byte("false")) {
+		*b = 0
+	}
+	return
 }
 
 var (
