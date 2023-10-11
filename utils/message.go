@@ -106,7 +106,10 @@ func ContainFor[T comparable](slice []T, condition func(item T) bool) bool {
 
 // ========================================
 
-func NewDelay(ctx *zero.Ctx) *Delay {
+func NewDelay(ctx *zero.Ctx, enable bool) *Delay {
+	if !enable {
+		return &Delay{}
+	}
 	d := Delay{t: time.Now().Add(waitTimeout), closed: false, ctx: ctx}
 	go d.run()
 	return &d

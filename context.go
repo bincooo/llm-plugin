@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/wdvxdr1123/ZeroBot/message"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -130,7 +129,10 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 		bot = vars.Claude
 	}
 
-	args := types.ConversationContextArgs{}
+	args := types.ConversationContextArgs{
+		PresetId: "-1",
+		TokenId:  "-1",
+	}
 	cctx := autotypes.ConversationContext{
 		Id:        key,
 		Bot:       bot,
@@ -252,11 +254,6 @@ func checkWebOpenai(token *repo.Token, proxy string) error {
 func parseMessage(ctx *zero.Ctx) string {
 	// and more...
 	text := ctx.ExtractPlainText()
-	re := regexp.MustCompile(`喵{2,}`)
-	text = re.ReplaceAllString(text, "喵~")
-	re = regexp.MustCompile(`汪{2,}`)
-	text = re.ReplaceAllString(text, "汪~")
-
 	picture := tryPicture(ctx)
 	if picture != "" {
 		imgdata, err := web.GetData(picture)

@@ -38,8 +38,12 @@ var help = `
 - [开启|切换]预设 + [预设名]
 - 删除凭证 + [key]
 - 添加凭证 + [key]:[value]
+- 语音列表
+- [开启|切换]语音 [type] [name]
+- 关闭语音
 - 切换AI + [AI类型：openai-api、openai-web、claude、claude-web、
-	bing-(c|b|p|s)、poe-(gpt3.5|gpt4|gpt4-32k|claude+|claude100k)]
+     bing-(c|b|p|s)、poe-(gpt3.5|gpt4|gpt4-32k|claude+|claude100k)]
+- AI列表
 `
 var (
 	engine = control.Register("miaox", &ctrl.Options[*zero.Ctx]{
@@ -93,17 +97,19 @@ func init() {
 		Handle(switchTokensCommand)
 	engine.OnRegex(`[开启|切换]预设\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchPresetSceneCommand)
-	engine.OnRegex(`切换AI\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnFullMatch("AI列表", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+		Handle(aiCommand)
+	engine.OnRegex(`切换AI\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchAICommand)
 	engine.OnFullMatch("预设列表", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(presetScenesCommand)
-	engine.OnFullMatch("历史对话", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnFullMatch("历史对话", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(historyCommand)
-	engine.OnFullMatch("语音列表", zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnFullMatch("语音列表", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(ttsCommand)
-	engine.OnFullMatch("关闭语音", zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnFullMatch("关闭语音", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(closeTTSCommand)
-	engine.OnRegex(`[开启|切换]语音\s(.+)`, zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnRegex(`[开启|切换]语音\s(.+)`, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTTSCommand)
 	engine.OnRegex(".+", zero.OnlyToMe, repo.OnceOnSuccess, excludeOnMessage).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
@@ -111,6 +117,30 @@ func init() {
 	cmd.Register("/api/global", repo.GlobalService{}, cmd.NewMenu("global", "全局配置"))
 	cmd.Register("/api/preset", repo.PresetService{}, cmd.NewMenu("preset", "预设配置"))
 	cmd.Register("/api/token", repo.TokenService{}, cmd.NewMenu("token", "凭证配置"))
+}
+
+func aiCommand(ctx *zero.Ctx) {
+	slice := map[string][]string{
+		"openai": {
+			"openai-api",
+			"openai-web",
+		},
+		"claude": {
+			"claude",
+			"claude-web",
+		},
+		"bing": {
+			"bing-c",
+			"bing-b",
+			"bing-p",
+			"bing-s",
+		},
+	}
+	tex := ""
+	for k, v := range slice {
+		tex += "** " + k + " **\n" + strings.Join(v, "\n") + "\n\n"
+	}
+	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(tex))
 }
 
 // 自定义优先级
@@ -209,7 +239,13 @@ func conversationCommand(ctx *zero.Ctx) {
 		cctx.Bot = xvars.OpenAIAPI
 	}
 
-	delay := utils.NewDelay(ctx)
+	section := false
+	presetScene := repo.GetPresetScene(args.PresetId, "", "")
+	if presetScene != nil {
+		section = presetScene.Section
+	}
+
+	delay := utils.NewDelay(ctx, section)
 	cacheMessage := make([]string, 0)
 	lmtHandle := func(response autotypes.PartialResponse) {
 		if response.Status == xvars.Begin {
@@ -219,7 +255,7 @@ func conversationCommand(ctx *zero.Ctx) {
 		if len(response.Message) > 0 {
 			if response.Status == xvars.Closed && strings.TrimSpace(response.Message) == "" {
 			} else {
-				if args.Tts == "" {
+				if section || args.Tts == "" {
 					segment := utils.StringToMessageSegment(cctx.Id, response.Message)
 					ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
 					delay.Defer()
@@ -254,8 +290,9 @@ func conversationCommand(ctx *zero.Ctx) {
 				slice := strings.Split(args.Tts, "/")
 				msg := strings.TrimSpace(strings.Join(cacheMessage, ""))
 				if msg != "" {
+					segment := utils.StringToMessageSegment(cctx.Id, msg)
 					audios, e := tts.Audio(slice[0], slice[1], msg)
-					ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(msg))
+					ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
 					if e != nil {
 						ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("生成语音失败："+e.Error()))
 					} else {
@@ -265,6 +302,10 @@ func conversationCommand(ctx *zero.Ctx) {
 						}
 					}
 				}
+			} else if !section { // 关闭了分段输出
+				msg := strings.TrimSpace(strings.Join(cacheMessage, ""))
+				segment := utils.StringToMessageSegment(cctx.Id, msg)
+				ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
 			}
 			logrus.Info("[MiaoX] - 结束应答")
 			delay.Close()

@@ -49,6 +49,7 @@ type PresetScene struct {
 	Content string `db:"content" json:"content"`     // 预设内容
 	Message string `db:"message" json:"message"`     // 消息模版
 	Chain   string `db:"chain" json:"chain"`         // 拦截处理器
+	Section bool   `db:"section" json:"section"`     // 是否分段输出
 }
 
 var (
