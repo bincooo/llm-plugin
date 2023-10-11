@@ -242,7 +242,7 @@ func conversationCommand(ctx *zero.Ctx) {
 	section := false
 	presetScene := repo.GetPresetScene(args.PresetId, "", "")
 	if presetScene != nil {
-		section = presetScene.Section
+		section = presetScene.Section == 1
 	}
 
 	delay := utils.NewDelay(ctx, section)
