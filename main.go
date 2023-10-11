@@ -252,7 +252,7 @@ func conversationCommand(ctx *zero.Ctx) {
 			delay.Defer()
 		}
 
-		if len(response.Message) > 0 {
+		if len(strings.TrimSpace(response.Message)) > 0 {
 			if response.Status == xvars.Closed && strings.TrimSpace(response.Message) == "" {
 			} else {
 				if section || args.Tts == "" {
