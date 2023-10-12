@@ -41,8 +41,7 @@ var help = `
 - 语音列表
 - [开启|切换]语音 [type] [name]
 - 关闭语音
-- 切换AI + [AI类型：openai-api、openai-web、claude、claude-web、
-     bing-(c|b|p|s)、poe-(gpt3.5|gpt4|gpt4-32k|claude+|claude100k)]
+- 切换AI + [AI类型：openai-api、openai-web、claude、、、]
 - AI列表
 `
 var (
@@ -146,7 +145,7 @@ func aiCommand(ctx *zero.Ctx) {
 // 自定义优先级
 func excludeOnMessage(ctx *zero.Ctx) bool {
 	msg := ctx.MessageString()
-	exclude := []string{"添加凭证 ", "删除凭证 ", "凭证列表", "切换", "开启", "预设列表", "历史对话", "语音列表", "/", "!"}
+	exclude := []string{"AI列表", "添加凭证 ", "删除凭证 ", "凭证列表", "切换", "开启", "预设列表", "历史对话", "语音列表", "/", "!"}
 	for _, value := range exclude {
 		if strings.HasPrefix(msg, value) {
 			return false
@@ -304,8 +303,10 @@ func conversationCommand(ctx *zero.Ctx) {
 				}
 			} else if !section { // 关闭了分段输出
 				msg := strings.TrimSpace(strings.Join(cacheMessage, ""))
-				segment := utils.StringToMessageSegment(cctx.Id, msg)
-				ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
+				if msg != "" {
+					segment := utils.StringToMessageSegment(cctx.Id, msg)
+					ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
+				}
 			}
 			logrus.Info("[MiaoX] - 结束应答")
 			delay.Close()
