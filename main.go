@@ -121,18 +121,18 @@ func init() {
 func aiCommand(ctx *zero.Ctx) {
 	slice := map[string][]string{
 		"openai": {
-			"openai-api",
-			"openai-web",
+			"- openai-api (api接口)",
+			"- openai-web (网页接口)",
 		},
 		"claude": {
-			"claude",
-			"claude-web",
+			"- claude (slack接入)",
+			"- claude-web (网页接入)",
 		},
 		"bing": {
-			"bing-c",
-			"bing-b",
-			"bing-p",
-			"bing-s",
+			"- bing-c (创造性)",
+			"- bing-b (平衡性)",
+			"- bing-p (精确性)",
+			"- bing-s (半解禁)",
 		},
 	}
 	tex := ""
@@ -252,9 +252,8 @@ func conversationCommand(ctx *zero.Ctx) {
 		}
 
 		if len(strings.TrimSpace(response.Message)) > 0 {
-			if response.Status == xvars.Closed && strings.TrimSpace(response.Message) == "" {
-			} else {
-				if section || args.Tts == "" {
+			if response.Status != xvars.Closed {
+				if section && args.Tts == "" {
 					segment := utils.StringToMessageSegment(cctx.Id, response.Message)
 					ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
 					delay.Defer()
