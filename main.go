@@ -66,6 +66,10 @@ var (
 	}
 )
 
+func CustomPriority(matcher *control.Matcher, priority int) *control.Matcher {
+	return (*control.Matcher)((*zero.Matcher)(matcher).SetPriority(priority))
+}
+
 func init() {
 	vars.E = engine
 
@@ -110,11 +114,11 @@ func init() {
 		Handle(closeTTSCommand)
 	engine.OnRegex(`[开启|切换]语音\s(.+)`, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTTSCommand)
-	engine.OnRegex(".+", zero.OnlyToMe, repo.OnceOnSuccess, excludeOnMessage).SetBlock(true).Limit(ctxext.LimitByUser).
-		Handle(conversationCommand)
-	engine.OnNotice(func(ctx *zero.Ctx) bool {
+	CustomPriority(engine.OnNotice(func(ctx *zero.Ctx) bool {
 		return ctx.Event.NoticeType == "group_recall" || ctx.Event.NoticeType == "friend_recall"
-	}).SetBlock(false).Handle(recallMessageCommand)
+	}), 10).SetBlock(false).Handle(recallMessageCommand)
+	CustomPriority(engine.OnMessage(zero.OnlyToMe, repo.OnceOnSuccess), 999999).SetBlock(true).Limit(ctxext.LimitByUser).
+		Handle(conversationCommand)
 
 	cmd.Register("/api/global", repo.GlobalService{}, cmd.NewMenu("global", "全局配置"))
 	cmd.Register("/api/preset", repo.PresetService{}, cmd.NewMenu("preset", "预设配置"))
@@ -146,16 +150,16 @@ func aiCommand(ctx *zero.Ctx) {
 }
 
 // 自定义优先级
-func excludeOnMessage(ctx *zero.Ctx) bool {
-	msg := ctx.MessageString()
-	exclude := []string{"AI列表", "添加凭证 ", "删除凭证 ", "凭证列表", "切换", "开启", "预设列表", "历史对话", "语音列表", "/", "!"}
-	for _, value := range exclude {
-		if strings.HasPrefix(msg, value) {
-			return false
-		}
-	}
-	return true
-}
+//func excludeOnMessage(ctx *zero.Ctx) bool {
+//	msg := ctx.MessageString()
+//	exclude := []string{"AI列表", "添加凭证 ", "删除凭证 ", "凭证列表", "切换", "开启", "预设列表", "历史对话", "语音列表", "/", "!"}
+//	for _, value := range exclude {
+//		if strings.HasPrefix(msg, value) {
+//			return false
+//		}
+//	}
+//	return true
+//}
 
 func historyCommand(ctx *zero.Ctx) {
 	key := getId(ctx)
@@ -213,10 +217,12 @@ func switchTTSCommand(ctx *zero.Ctx) {
 
 // 撤回消息时删除缓存中的消息记录
 func recallMessageCommand(ctx *zero.Ctx) {
-	reply := message.Reply(ctx.Event.MessageID)
+	id, ok := ctx.Event.MessageID.(int64)
+	if !ok {
+		return
+	}
 	uid := getId(ctx)
-	messageId := reply.Data["id"]
-	for _, msg := range zero.GetTriggeredMessages(message.NewMessageIDFromString(messageId)) {
+	for _, msg := range zero.GetTriggeredMessages(message.NewMessageIDFromInteger(id)) {
 		autostore.DeleteMessageFor(uid, msg.String())
 	}
 }
