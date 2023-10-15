@@ -112,6 +112,9 @@ func init() {
 		Handle(switchTTSCommand)
 	engine.OnRegex(".+", zero.OnlyToMe, repo.OnceOnSuccess, excludeOnMessage).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
+	engine.OnNotice(func(ctx *zero.Ctx) bool {
+		return ctx.Event.NoticeType == "group_recall" || ctx.Event.NoticeType == "friend_recall"
+	}).SetBlock(false).Handle(recallMessageCommand)
 
 	cmd.Register("/api/global", repo.GlobalService{}, cmd.NewMenu("global", "全局配置"))
 	cmd.Register("/api/preset", repo.PresetService{}, cmd.NewMenu("preset", "预设配置"))
@@ -208,6 +211,16 @@ func switchTTSCommand(ctx *zero.Ctx) {
 	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("开启完毕"))
 }
 
+// 撤回消息时删除缓存中的消息记录
+func recallMessageCommand(ctx *zero.Ctx) {
+	reply := message.Reply(ctx.Event.MessageID)
+	uid := getId(ctx)
+	messageId := reply.Data["id"]
+	for _, msg := range zero.GetTriggeredMessages(message.NewMessageIDFromString(messageId)) {
+		autostore.DeleteMessageFor(uid, msg.String())
+	}
+}
+
 // 聊天
 func conversationCommand(ctx *zero.Ctx) {
 	name := ctx.Event.Sender.NickName
@@ -215,20 +228,25 @@ func conversationCommand(ctx *zero.Ctx) {
 		return
 	}
 
+	reply := message.Reply(ctx.Event.MessageID)
 	cctx, err := createConversationContext(ctx, "")
 	if err != nil {
-		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("发生异常: "+err.Error()))
+		ctx.SendChain(reply, message.Text("发生异常: "+err.Error()))
 		return
 	}
 
 	prompt := parseMessage(ctx)
+	messageId := reply.Data["id"]
+
 	// 限制对话长度
 	str := []rune(prompt)
 	if len(str) > 500 {
-		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(BB[rand.Intn(len(BB))]))
+		ctx.SendChain(reply, message.Text(BB[rand.Intn(len(BB))]))
 		return
 	}
+
 	cctx.Prompt = prompt
+	cctx.MessageId = messageId
 	args := cctx.Data.(types.ConversationContextArgs)
 	args.Current = strconv.FormatInt(ctx.Event.Sender.ID, 10)
 	args.Nickname = ctx.Event.Sender.NickName
@@ -252,15 +270,13 @@ func conversationCommand(ctx *zero.Ctx) {
 		}
 
 		if len(strings.TrimSpace(response.Message)) > 0 {
-			if response.Status != xvars.Closed {
-				if section && args.Tts == "" {
-					segment := utils.StringToMessageSegment(cctx.Id, response.Message)
-					ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
-					delay.Defer()
-				} else {
-					// 开启语音就不要用分段响应了
-					cacheMessage = append(cacheMessage, response.Message)
-				}
+			if section && args.Tts == "" {
+				segment := utils.StringToMessageSegment(cctx.Id, response.Message)
+				ctx.SendChain(append(segment, reply)...)
+				delay.Defer()
+			} else {
+				// 开启语音就不要用分段响应了
+				cacheMessage = append(cacheMessage, response.Message)
 			}
 		}
 
@@ -277,7 +293,7 @@ func conversationCommand(ctx *zero.Ctx) {
 				}
 				deleteConversationContext(ctx)
 			}
-			ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(errText))
+			ctx.SendChain(reply, message.Text(errText))
 			delay.Close()
 			return
 		}
@@ -290,9 +306,9 @@ func conversationCommand(ctx *zero.Ctx) {
 				if msg != "" {
 					segment := utils.StringToMessageSegment(cctx.Id, msg)
 					audios, e := tts.Audio(slice[0], slice[1], msg)
-					ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
+					ctx.SendChain(append(segment, reply)...)
 					if e != nil {
-						ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("生成语音失败："+e.Error()))
+						ctx.SendChain(reply, message.Text("生成语音失败："+e.Error()))
 					} else {
 						for _, audio := range audios {
 							time.Sleep(600 * time.Millisecond)
@@ -313,7 +329,7 @@ func conversationCommand(ctx *zero.Ctx) {
 	}
 
 	if e := lmt.Join(cctx, lmtHandle); e != nil {
-		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(e.Error()))
+		ctx.SendChain(reply, message.Text(e.Error()))
 	}
 }
 
