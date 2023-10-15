@@ -236,16 +236,11 @@ func switchTTSCommand(ctx *zero.Ctx) {
 
 // 撤回消息时删除缓存中的消息记录
 func recallMessageCommand(ctx *zero.Ctx) {
-	id, ok := ctx.Event.MessageID.(int64)
-	if !ok {
-		return
-	}
+	reply := message.Reply(ctx.Event.MessageID)
+
 	uid := getId(ctx)
-	for _, msg := range zero.GetTriggeredMessages(message.NewMessageIDFromInteger(id)) {
-		messageId := msg.String()
-		autostore.DeleteMessageFor(uid, messageId)
-		logrus.Info("撤回消息ID: ", messageId)
-	}
+	messageId := reply.Data["id"]
+	autostore.DeleteMessageFor(uid, messageId)
 }
 
 // 聊天
@@ -264,7 +259,6 @@ func conversationCommand(ctx *zero.Ctx) {
 
 	prompt := parseMessage(ctx)
 	messageId := reply.Data["id"]
-	logrus.Info("当前消息ID: ", messageId)
 
 	// 限制对话长度
 	str := []rune(prompt)
