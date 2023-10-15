@@ -66,8 +66,27 @@ var (
 	}
 )
 
-func CustomPriority(matcher *control.Matcher, priority int) *control.Matcher {
-	return (*control.Matcher)((*zero.Matcher)(matcher).SetPriority(priority))
+// inc:0 自增 priority 0~9, set:0 设置priority
+func CustomPriority(matcher *control.Matcher, priority string) *control.Matcher {
+	switch priority[:4] {
+	case "set:":
+		i, err := strconv.Atoi(priority[4:])
+		if err != nil {
+			panic(err)
+		}
+		return (*control.Matcher)((*zero.Matcher)(matcher).SetPriority(i))
+	case "inc:":
+		i, err := strconv.Atoi(priority[4:])
+		if err != nil {
+			panic(err)
+		}
+		if i < 0 || i >= 10 {
+			panic("优先级增量范围0～9，实际为: " + strconv.Itoa(i))
+		}
+		return (*control.Matcher)((*zero.Matcher)(matcher).SetPriority(matcher.Priority + i))
+	default:
+		panic("未知的优先级指令")
+	}
 }
 
 func init() {
@@ -116,8 +135,8 @@ func init() {
 		Handle(switchTTSCommand)
 	CustomPriority(engine.OnNotice(func(ctx *zero.Ctx) bool {
 		return ctx.Event.NoticeType == "group_recall" || ctx.Event.NoticeType == "friend_recall"
-	}), 10).SetBlock(false).Handle(recallMessageCommand)
-	CustomPriority(engine.OnMessage(zero.OnlyToMe, repo.OnceOnSuccess), 999999).SetBlock(true).Limit(ctxext.LimitByUser).
+	}), "set:0").SetBlock(false).Handle(recallMessageCommand)
+	CustomPriority(engine.OnMessage(zero.OnlyToMe, repo.OnceOnSuccess), "inc:9").SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
 
 	cmd.Register("/api/global", repo.GlobalService{}, cmd.NewMenu("global", "全局配置"))
@@ -223,7 +242,9 @@ func recallMessageCommand(ctx *zero.Ctx) {
 	}
 	uid := getId(ctx)
 	for _, msg := range zero.GetTriggeredMessages(message.NewMessageIDFromInteger(id)) {
-		autostore.DeleteMessageFor(uid, msg.String())
+		messageId := msg.String()
+		autostore.DeleteMessageFor(uid, messageId)
+		logrus.Info("撤回消息ID: ", messageId)
 	}
 }
 
@@ -243,6 +264,7 @@ func conversationCommand(ctx *zero.Ctx) {
 
 	prompt := parseMessage(ctx)
 	messageId := reply.Data["id"]
+	logrus.Info("当前消息ID: ", messageId)
 
 	// 限制对话长度
 	str := []rune(prompt)
