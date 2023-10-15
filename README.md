@@ -1,10 +1,31 @@
 ## 描述
 
-这是`ZeroBot-Plugin`的一个AI接入插件，集成了`openai-api` 、`openai-web`、 `BingAI`、`claude`、`dify`
+这是`ZeroBot-Plugin`的一个AI接入插件，集成了`openai-api` 、`openai-web`、 `BingAI`、`claude`
 
-内部实现了等待对话，web可视化配置。拦截链实现：内置了`cahce`（对话缓存）、`tmpl`（模板引擎）
+内部实现了等待对话，web可视化配置。拦截链实现：内置了`cahce`（对话缓存）、`tmpl`（模板引擎）、`online`（在线人缓存）
 
 ---
+### 内置llm对接实现：
+
+```tex
+** openai **
+- openai-api (api接口)
+- openai-web (网页接口)
+
+** claude **
+- claude (slack接入)
+- claude-web (网页接入)
+
+** bing **
+- bing-c (创造性)
+- bing-b (平衡性)
+- bing-p (精确性)
+- bing-s (半解禁)
+```
+
+此外，可通过`凭证列表`切换指定的llm，即：同时配置了多个key可随意切换。
+
+借此可以通过第三方转接openai接口的llm也可接入，比如FastGPT的api接口。
 
 ### 模板引擎：
 
@@ -20,11 +41,12 @@
 {
     "args": {
         "Current": "[QQ]",
-        "Nickname": "[qq昵称]"
+        "Nickname": "[qq昵称]",
+        "Tts": "[语音名称]"
     },
     "online": [
         {
-						"id": "[在线的QQ]",
+          	"id": "[在线的QQ]",
           	"name": "[在线的qq昵称]"
         },
       	...
@@ -108,6 +130,8 @@ setp 3:
     |- data
         |- miaox
 ```
+
+或者下载源码，复制data文件夹到`ZeroBot-Plugin/data/data` 并改名为 `ZeroBot-Plugin/data/miaox`
 
 ### -
 启动`ZeroBot-Plugin`后在浏览器内访问 http://127.0.0.1:8081 配置接入信息即可
