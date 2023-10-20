@@ -5,12 +5,15 @@ import (
 	"github.com/bincooo/llm-plugin/internal/repo/store"
 	"github.com/sirupsen/logrus"
 	"html/template"
+	"math/rand"
 	"strings"
 	"time"
 
 	autotypes "github.com/bincooo/AutoAI/types"
 	"github.com/bincooo/llm-plugin/internal/types"
 )
+
+var r = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 type TplInterceptor struct {
 	autotypes.BaseInterceptor
@@ -47,7 +50,18 @@ func (*TplInterceptor) Before(bot autotypes.Bot, ctx *autotypes.ConversationCont
 }
 
 func tplHandle(tmplVar string, context map[string]any) (string, error) {
-	tmpl, err := template.New("context").Parse(tmplVar)
+	t := template.New("context")
+	// 自定义函数
+	funcMap := template.FuncMap{
+		"contains": func(s1, s2 string) bool {
+			return strings.Contains(s1, s2)
+		},
+		"rand": func(n1, n2 int) int {
+			return r.Intn(n2-n1) + n1
+		},
+	}
+	t.Funcs(funcMap)
+	tmpl, err := t.Parse(tmplVar)
 	if err != nil {
 		logrus.Error("模版引擎构建失败：", err)
 		return "", err
