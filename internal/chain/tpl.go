@@ -13,8 +13,6 @@ import (
 	"github.com/bincooo/llm-plugin/internal/types"
 )
 
-var r = rand.New(rand.NewSource(time.Now().UnixNano()))
-
 type TplInterceptor struct {
 	autotypes.BaseInterceptor
 }
@@ -39,7 +37,7 @@ func (*TplInterceptor) Before(bot autotypes.Bot, ctx *autotypes.ConversationCont
 	}
 
 	if ctx.Preset != "" {
-		delete(kv, "content")
+		// delete(kv, "content")
 		result, err := tplHandle(ctx.Preset, kv)
 		if err != nil {
 			return false, err
@@ -51,13 +49,34 @@ func (*TplInterceptor) Before(bot autotypes.Bot, ctx *autotypes.ConversationCont
 
 func tplHandle(tmplVar string, context map[string]any) (string, error) {
 	t := template.New("context")
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	// 自定义函数
 	funcMap := template.FuncMap{
-		"contains": func(s1, s2 string) bool {
-			return strings.Contains(s1, s2)
+		"contains": func(s1, s2 any) bool {
+			logrus.Info("执行自定义模板函数contains：", s1, s2)
+			if _, ok := s1.(string); !ok {
+				return false
+			}
+			if _, ok := s2.(string); !ok {
+				return false
+			}
+			return strings.Contains(s1.(string), s2.(string))
 		},
 		"rand": func(n1, n2 int) int {
+			logrus.Info("执行自定义模板函数rand：", n1, n2)
 			return r.Intn(n2-n1) + n1
+		},
+		"randvar": func(slice ...any) any {
+			logrus.Info("执行自定义模板函数randvar：", slice)
+			l := len(slice)
+			if l == 0 {
+				return ""
+			}
+			return slice[r.Intn(l)]
+		},
+		"set": func(key string, value any) {
+			logrus.Info("执行自定义模板函数set：", key, value)
+			context[key] = value
 		},
 	}
 	t.Funcs(funcMap)
