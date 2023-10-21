@@ -28,14 +28,6 @@ func (*TplInterceptor) Before(bot autotypes.Bot, ctx *autotypes.ConversationCont
 		"date":    time.Now().Format("2006-01-02 15:04:05"),
 	}
 
-	if ctx.Format != "" {
-		result, err := tplHandle(ctx.Format, kv)
-		if err != nil {
-			return false, err
-		}
-		ctx.Prompt = result
-	}
-
 	if ctx.Preset != "" {
 		// delete(kv, "content")
 		result, err := tplHandle(ctx.Preset, kv)
@@ -43,6 +35,14 @@ func (*TplInterceptor) Before(bot autotypes.Bot, ctx *autotypes.ConversationCont
 			return false, err
 		}
 		ctx.Preset = result
+	}
+
+	if ctx.Format != "" {
+		result, err := tplHandle(ctx.Format, kv)
+		if err != nil {
+			return false, err
+		}
+		ctx.Prompt = result
 	}
 	return true, nil
 }
@@ -74,9 +74,10 @@ func tplHandle(tmplVar string, context map[string]any) (string, error) {
 			}
 			return slice[r.Intn(l)]
 		},
-		"set": func(key string, value any) {
+		"set": func(key string, value any) string {
 			logrus.Info("执行自定义模板函数set：", key, value)
 			context[key] = value
+			return ""
 		},
 	}
 	t.Funcs(funcMap)
