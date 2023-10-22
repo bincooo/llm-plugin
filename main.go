@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/FloatTech/zbputils/control"
 	"github.com/FloatTech/zbputils/ctxext"
-	"github.com/bincooo/AutoAI"
+	"github.com/bincooo/chatgpt-adapter"
 	"github.com/bincooo/edge-api/util"
 	"github.com/bincooo/llm-plugin/cmd"
 	"github.com/bincooo/llm-plugin/internal/chain"
@@ -23,9 +23,9 @@ import (
 	"time"
 
 	ctrl "github.com/FloatTech/zbpctrl"
-	autostore "github.com/bincooo/AutoAI/store"
-	autotypes "github.com/bincooo/AutoAI/types"
-	xvars "github.com/bincooo/AutoAI/vars"
+	autostore "github.com/bincooo/chatgpt-adapter/store"
+	autotypes "github.com/bincooo/chatgpt-adapter/types"
+	xvars "github.com/bincooo/chatgpt-adapter/vars"
 	claudevars "github.com/bincooo/claude-api/vars"
 	wapi "github.com/bincooo/openai-wapi"
 	zero "github.com/wdvxdr1123/ZeroBot"
@@ -101,7 +101,7 @@ func init() {
 	tts.Reg("Edge", &_edgeTts{})
 	tts.Reg("genshin", &_genshinvoice{})
 
-	lmt = AutoAI.NewCommonLimiter()
+	lmt = adapter.NewCommonLimiter()
 	if e := lmt.RegChain("tmpl", &chain.TplInterceptor{}); e != nil {
 		panic(e)
 	}

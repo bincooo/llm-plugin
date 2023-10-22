@@ -7,10 +7,10 @@ require (
 	github.com/FloatTech/sqlite v1.6.2
 	github.com/FloatTech/zbpctrl v1.5.3-0.20230514154630-b74e6fcca380
 	github.com/FloatTech/zbputils v1.6.2-0.20230514154857-9363fdb11fd6
-	github.com/bincooo/AutoAI v1.0.12
-	github.com/bincooo/claude-api v1.0.3-0.20231006025050-b13fff6295cc
-	github.com/bincooo/edge-api v1.0.1-0.20231014110550-58d04905118f
-	github.com/bincooo/openai-wapi v1.0.1-0.20230717215411-79a74f385b4f
+	github.com/bincooo/chatgpt-adapter v1.0.13-0.20231022085914-01bed3c1b991
+	github.com/bincooo/claude-api v1.0.3
+	github.com/bincooo/edge-api v1.0.1
+	github.com/bincooo/openai-wapi v1.0.1
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/uuid v1.3.1
 	github.com/pp-group/edge-tts-go v1.1.2
@@ -71,7 +71,7 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20220927061507-ef77025ab5aa // indirect
 	github.com/samber/go-gpt-3-encoder v0.3.1 // indirect
 	github.com/samber/lo v1.37.0 // indirect
-	github.com/sashabaranov/go-openai v1.15.3 // indirect
+	github.com/sashabaranov/go-openai v1.16.0 // indirect
 	github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
@@ -85,7 +85,7 @@ require (
 	golang.org/x/image v0.3.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

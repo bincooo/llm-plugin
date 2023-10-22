@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	autotypes "github.com/bincooo/AutoAI/types"
+	autotypes "github.com/bincooo/chatgpt-adapter/types"
 	"github.com/bincooo/llm-plugin/internal/types"
 )
 

@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/bincooo/AutoAI"
-	"github.com/bincooo/AutoAI/types"
-	"github.com/bincooo/AutoAI/vars"
+	"github.com/bincooo/chatgpt-adapter"
+	"github.com/bincooo/chatgpt-adapter/types"
+	"github.com/bincooo/chatgpt-adapter/vars"
 )
 
 func main() {
-	manager := AutoAI.NewBotManager()
+	manager := adapter.NewBotManager()
 	context := Context()
 	context.Prompt = "嗨"
 	manager.Reply(context, func(response types.PartialResponse) {

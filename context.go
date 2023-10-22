@@ -12,12 +12,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bincooo/AutoAI/vars"
+	"github.com/bincooo/chatgpt-adapter/vars"
 	"github.com/bincooo/llm-plugin/internal/repo"
 	"github.com/bincooo/llm-plugin/internal/types"
 	"github.com/sirupsen/logrus"
 
-	autotypes "github.com/bincooo/AutoAI/types"
+	autotypes "github.com/bincooo/chatgpt-adapter/types"
 	claudevars "github.com/bincooo/claude-api/vars"
 	wapi "github.com/bincooo/openai-wapi"
 	zero "github.com/wdvxdr1123/ZeroBot"
