@@ -9,6 +9,10 @@ import (
 	zero "github.com/wdvxdr1123/ZeroBot"
 )
 
+const (
+	waitTimeout = 3 * time.Second
+)
+
 func NewGifTimer(ctx *zero.Ctx, enable bool) *GifTimer {
 	d := GifTimer{t: time.Now().Add(waitTimeout), closed: false, ctx: ctx}
 	if enable {

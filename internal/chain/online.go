@@ -22,7 +22,7 @@ func (*OnlineInterceptor) Before(bot autotypes.Bot, ctx *autotypes.ConversationC
 		}
 
 		if len(online) == 1 {
-			online = make([]store.OKv, 0)
+			online = make([]store.OKeyv, 0)
 		} else {
 			online = append(online[:i], online[i+1:]...)
 		}
@@ -31,7 +31,7 @@ func (*OnlineInterceptor) Before(bot autotypes.Bot, ctx *autotypes.ConversationC
 	}
 
 	// 加入在线列表
-	online = append(online, store.OKv{
+	online = append(online, store.OKeyv{
 		Id:   args.Current,
 		Name: args.Nickname,
 	})

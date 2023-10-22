@@ -90,7 +90,7 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 		bot = vars.Bing
 	}
 
-	tokens, err := repo.FindTokens(bot)
+	tokens, err := repo.FindTokens("", bot)
 	if err != nil {
 		return autotypes.ConversationContext{}, errors.New("查询凭证失败, 请先添加`" + bot + "`凭证")
 	}
@@ -107,24 +107,24 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 		bot = vars.Claude
 	}
 
+	maxTokens := 4000
+	if tokens[0].MaxTokens != 0 {
+		maxTokens = tokens[0].MaxTokens
+	}
+
 	args := types.ConversationContextArgs{
-		PresetId: "-1",
-		TokenId:  "-1",
+		Pid: "-1",
 	}
 	cctx := autotypes.ConversationContext{
 		Id:        key,
 		Bot:       bot,
-		MaxTokens: global.MaxTokens,
+		MaxTokens: maxTokens,
 		Chain:     BaseChain,
 		Model:     model,
 		Proxy:     global.Proxy,
 	}
 
 	if bot == vars.OpenAIAPI {
-		//	// 检查余额
-		//	if e := checkApiOpenai(*tokens[0], global.Proxy); e != nil {
-		//		return cctx, e
-		//	}
 		if tokens[0].AppId != "" {
 			cctx.Model = tokens[0].AppId
 		}
@@ -133,38 +133,25 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 	if bot == vars.OpenAIWeb {
 		// 检查失效
 		cctx.BaseURL = "https://ai.fakeopen.com/api"
-		//if err := checkWebOpenai(tokens[0], global.Proxy); err != nil {
-		//	return cctx, err
-		//}
-		//// 为空，尝试登陆
-		//if tokens[0].Token == "" {
-		//	if err := loginWebOpenai(*tokens[0], global); err != nil {
-		//		return cctx, err
-		//	}
-		//}
 	}
 
 	if bot == vars.Claude {
 		cctx.AppId = tokens[0].AppId
 	}
 
-	if bot == vars.Bing {
-		cctx.BaseURL = global.NbServ
-	}
-
 	// 默认预设
-	if global.Preset != "" {
+	if global.Role != "" {
 		suf := ""
 		if bot == vars.Claude && model == claudevars.Model4WebClaude2 {
 			suf = "-web"
 		}
-		preset := repo.GetPresetScene("", global.Preset, bot+suf)
+		preset := repo.GetRole("", global.Role, bot+suf)
 		if preset == nil {
-			logrus.Warn("预设`", global.Preset, "`不存在")
+			logrus.Warn("预设`", global.Role, "`不存在")
 		} else if preset.Type != bot+suf {
-			logrus.Warn("预设`", global.Preset, "`类型不匹配, 需要（", bot, "）实际为（", preset.Type, "）")
+			logrus.Warn("预设`", global.Role, "`类型不匹配, 需要（", bot, "）实际为（", preset.Type, "）")
 		} else {
-			args.PresetId = preset.Id
+			args.Pid = preset.Id
 			cctx.Preset = preset.Content
 			cctx.Format = preset.Message
 			if preset.Chain != "" {
@@ -178,7 +165,6 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 		logrus.Infoln("[MiaoX] - AI转发地址： ", cctx.BaseURL)
 	}
 
-	args.TokenId = tokens[0].Id
 	cctx.Token = tokens[0].Token
 	cctx.Data = args
 
@@ -186,48 +172,6 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 	logrus.Infoln("[MiaoX] - 创建新的ConversationContext： ", key)
 	return cctx, nil
 }
-
-// 登陆网页版
-//func loginWebOpenai(token repo.Token, global repo.Global) error {
-//	t, err := wapi.WebLogin(token.Email, token.Passwd, global.Proxy)
-//	if err != nil {
-//		return errors.New("OpenAI WEB `" + token.Key + "`登陆失败: " + err.Error())
-//	}
-//	token.Token = t
-//	token.Expire = time.Now().Add(15 * 24 * time.Hour).Format("2006-01-02 15:04:05")
-//	repo.UpdateToken(token)
-//	return nil
-//}
-
-// 检查余额
-//func checkApiOpenai(token repo.Token, proxy string) error {
-//	if billing, _ := wapi.Query(context.Background(), token.Token, proxy); billing == nil || billing.System-billing.Soft < 0 {
-//		return errors.New("Err: `" + token.Key + "`凭证余额为0")
-//	}
-//	return nil
-//}
-
-// 检查过期时间
-//func checkWebOpenai(token *repo.Token, proxy string) error {
-//	if token.Expire != "" && token.Expire != "-1" {
-//		expire, err := time.Parse("2006-01-02 15:04:05", token.Expire)
-//		if err != nil {
-//			return errors.New("warning：[" + token.Key + "] `" + token.Expire + "`过期日期解析有误")
-//		}
-//
-//		if expire.Before(time.Now()) {
-//			// 已过期
-//			t, err := wapi.WebLogin(token.Email, token.Passwd, proxy)
-//			if err != nil {
-//				return errors.New("OpenAI WEB `" + t + "`登陆失败: " + err.Error())
-//			}
-//			token.Token = t
-//			token.Expire = time.Now().Add(14 * 24 * time.Hour).Format("2006-01-02 15:04:05")
-//			repo.UpdateToken(*token)
-//		}
-//	}
-//	return nil
-//}
 
 func parseMessage(ctx *zero.Ctx) string {
 	// and more...

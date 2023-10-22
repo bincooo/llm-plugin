@@ -8,11 +8,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
-)
-
-var (
-	waitTimeout = 3 * time.Second
 )
 
 // String转换消息对象MessageSegment
@@ -111,5 +106,3 @@ func ContainFor[T comparable](slice []T, condition func(item T) bool) bool {
 	}
 	return false
 }
-
-// ========================================

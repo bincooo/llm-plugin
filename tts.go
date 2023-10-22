@@ -3,7 +3,7 @@ package llm
 import (
 	"errors"
 	"github.com/FloatTech/floatbox/file"
-	"github.com/bincooo/llm-plugin/utils"
+	"github.com/bincooo/llm-plugin/internal/util"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"io"
@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	Xieyin = map[string]string{
+	xieyin = map[string]string{
 		"a": "`诶`",
 		"b": "`必`",
 		"c": "`西`",
@@ -40,7 +40,7 @@ var (
 		"t": "`踢`",
 		"u": "`优`",
 		"v": "`微`",
-		"w": "`答不留`",
+		"w": "`哒不溜`",
 		"x": "`爱克斯`",
 		"y": "`歪`",
 		"z": "`贼`",
@@ -76,7 +76,7 @@ func (maker *TTSMaker) Audio(k, tone, tex string) ([]string, error) {
 
 func (maker *TTSMaker) ContainTone(k, tone string) bool {
 	if api, ok := maker.kv[k]; ok {
-		return utils.Contains(api.Tones(), tone)
+		return util.Contains(api.Tones(), tone)
 	} else {
 		return false
 	}
@@ -144,7 +144,7 @@ type _genshinvoice struct {
 // 文本转语音
 func (tts *_genshinvoice) Audio(tone, tex string) ([]string, error) {
 	tex = strings.ToLower(tex)
-	for k, v := range Xieyin {
+	for k, v := range xieyin {
 		tex = strings.ReplaceAll(tex, k, v)
 	}
 
