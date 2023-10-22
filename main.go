@@ -5,14 +5,12 @@ import (
 	"github.com/FloatTech/zbputils/control"
 	"github.com/FloatTech/zbputils/ctxext"
 	"github.com/bincooo/chatgpt-adapter"
-	"github.com/bincooo/edge-api/util"
-	"github.com/bincooo/llm-plugin/cmd"
 	"github.com/bincooo/llm-plugin/internal/chain"
 	"github.com/bincooo/llm-plugin/internal/repo"
 	"github.com/bincooo/llm-plugin/internal/repo/store"
 	"github.com/bincooo/llm-plugin/internal/types"
-	"github.com/bincooo/llm-plugin/utils"
-	"github.com/bincooo/llm-plugin/vars"
+	"github.com/bincooo/llm-plugin/internal/util"
+	"github.com/bincooo/llm-plugin/internal/vars"
 	"github.com/sirupsen/logrus"
 	"github.com/wdvxdr1123/ZeroBot/message"
 	"math/rand"
@@ -23,8 +21,8 @@ import (
 	"time"
 
 	ctrl "github.com/FloatTech/zbpctrl"
-	autostore "github.com/bincooo/chatgpt-adapter/store"
-	autotypes "github.com/bincooo/chatgpt-adapter/types"
+	adstore "github.com/bincooo/chatgpt-adapter/store"
+	adtypes "github.com/bincooo/chatgpt-adapter/types"
 	xvars "github.com/bincooo/chatgpt-adapter/vars"
 	claudevars "github.com/bincooo/claude-api/vars"
 	wapi "github.com/bincooo/openai-wapi"
@@ -54,7 +52,7 @@ var (
 
 	tts TTSMaker
 
-	lmt autotypes.Limiter
+	lmt adtypes.Limiter
 
 	BB = []string{
 		"太啰嗦了巴嘎 ♪(´ε｀ )",
@@ -102,6 +100,7 @@ func init() {
 	tts.Reg("genshin", &_genshinvoice{})
 
 	lmt = adapter.NewCommonLimiter()
+	// init chain
 	if e := lmt.RegChain("tmpl", &chain.TplInterceptor{}); e != nil {
 		panic(e)
 	}
@@ -138,10 +137,6 @@ func init() {
 	}), "set:0").SetBlock(false).Handle(recallMessageCommand)
 	CustomPriority(engine.OnMessage(zero.OnlyToMe, repo.OnceOnSuccess), "inc:9").SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
-
-	cmd.Register("/api/global", repo.GlobalService{}, cmd.NewMenu("global", "全局配置"))
-	cmd.Register("/api/preset", repo.PresetService{}, cmd.NewMenu("preset", "预设配置"))
-	cmd.Register("/api/token", repo.TokenService{}, cmd.NewMenu("token", "凭证配置"))
 }
 
 func aiCommand(ctx *zero.Ctx) {
@@ -182,7 +177,7 @@ func aiCommand(ctx *zero.Ctx) {
 
 func historyCommand(ctx *zero.Ctx) {
 	key := getId(ctx)
-	messages := autostore.GetMessages(key)
+	messages := adstore.GetMessages(key)
 	logrus.Info(messages)
 	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已在后台打印"))
 }
@@ -240,7 +235,7 @@ func recallMessageCommand(ctx *zero.Ctx) {
 
 	uid := getId(ctx)
 	messageId := reply.Data["id"]
-	autostore.DeleteMessageFor(uid, messageId)
+	adstore.DeleteMessageFor(uid, messageId)
 }
 
 // 聊天
@@ -273,10 +268,6 @@ func conversationCommand(ctx *zero.Ctx) {
 	args.Current = strconv.FormatInt(ctx.Event.Sender.ID, 10)
 	args.Nickname = ctx.Event.Sender.NickName
 	cctx.Data = args
-	// 使用了poe-openai-proxy
-	if cctx.Bot == Poe {
-		cctx.Bot = xvars.OpenAIAPI
-	}
 
 	section := false
 	presetScene := repo.GetPresetScene(args.PresetId, "", "")
@@ -284,18 +275,20 @@ func conversationCommand(ctx *zero.Ctx) {
 		section = presetScene.Section == 1
 	}
 
-	delay := utils.NewDelay(ctx, section)
+	timer := util.NewGifTimer(ctx, section)
+	defer timer.Release()
+
 	cacheMessage := make([]string, 0)
-	lmtHandle := func(response autotypes.PartialResponse) {
+	lmtHandle := func(response adtypes.PartialResponse) {
 		if response.Status == xvars.Begin {
-			delay.Defer()
+			timer.Refill()
 		}
 
 		if len(strings.TrimSpace(response.Message)) > 0 {
 			if section && args.Tts == "" {
-				segment := utils.StringToMessageSegment(cctx.Id, response.Message)
+				segment := util.StringToMessageSegment(cctx.Id, response.Message)
 				ctx.SendChain(append(segment, reply)...)
-				delay.Defer()
+				timer.Refill()
 			} else {
 				// 开启语音就不要用分段响应了
 				cacheMessage = append(cacheMessage, response.Message)
@@ -303,20 +296,8 @@ func conversationCommand(ctx *zero.Ctx) {
 		}
 
 		if response.Error != nil {
-			errText := response.Error.Error()
-			go handleBingCaptcha(cctx.Token, response.Error)
-			if strings.Contains(errText, "code=401") {
-				// Token 过期了
-				if args.TokenId != "" {
-					if token := repo.GetToken(args.TokenId, "", ""); token != nil {
-						token.Token = ""
-						repo.UpdateToken(*token)
-					}
-				}
-				deleteConversationContext(ctx)
-			}
-			ctx.SendChain(reply, message.Text(errText))
-			delay.Close()
+			go util.HandleBingCaptcha(cctx.Token, response.Error)
+			ctx.SendChain(reply, message.Text(response.Error))
 			return
 		}
 
@@ -326,7 +307,7 @@ func conversationCommand(ctx *zero.Ctx) {
 				slice := strings.Split(args.Tts, "/")
 				msg := strings.TrimSpace(strings.Join(cacheMessage, ""))
 				if msg != "" {
-					segment := utils.StringToMessageSegment(cctx.Id, msg)
+					segment := util.StringToMessageSegment(cctx.Id, msg)
 					audios, e := tts.Audio(slice[0], slice[1], msg)
 					ctx.SendChain(append(segment, reply)...)
 					if e != nil {
@@ -341,12 +322,11 @@ func conversationCommand(ctx *zero.Ctx) {
 			} else if !section { // 关闭了分段输出
 				msg := strings.TrimSpace(strings.Join(cacheMessage, ""))
 				if msg != "" {
-					segment := utils.StringToMessageSegment(cctx.Id, msg)
+					segment := util.StringToMessageSegment(cctx.Id, msg)
 					ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
 				}
 			}
 			logrus.Info("[MiaoX] - 结束应答")
-			delay.Close()
 		}
 	}
 
@@ -375,7 +355,7 @@ func insertTokenCommand(ctx *zero.Ctx) {
 		ctx.Send("添加失败，凭证余额为0")
 		return
 	}
-	err = repo.InsertToken(repo.Token{
+	err = repo.InsertToken(repo.TokenConfig{
 		Key:   matches[1],
 		Token: matches[2],
 		Type:  xvars.OpenAIAPI,
@@ -425,9 +405,6 @@ func switchTokensCommand(ctx *zero.Ctx) {
 	}
 
 	bot := cctx.Bot
-	if bot == Poe {
-		bot = xvars.OpenAIAPI
-	}
 
 	args := cctx.Data.(types.ConversationContextArgs)
 	args.TokenId = token.Id
@@ -495,9 +472,6 @@ func switchPresetSceneCommand(ctx *zero.Ctx) {
 	cctx.Format = presetScene.Message
 	cctx.Chain = BaseChain + presetScene.Chain
 	bot := cctx.Bot
-	if bot == Poe {
-		bot = xvars.OpenAIAPI
-	}
 
 	lmt.Remove(cctx.Id, bot)
 	store.DeleteOnline(cctx.Id)
@@ -525,7 +499,7 @@ func presetScenesCommand(ctx *zero.Ctx) {
 
 func switchAICommand(ctx *zero.Ctx) {
 	bot := ctx.State["regex_matched"].([]string)[1]
-	var cctx autotypes.ConversationContext
+	var cctx adtypes.ConversationContext
 	switch bot {
 	case xvars.OpenAIAPI,
 		xvars.OpenAIWeb,
@@ -534,12 +508,7 @@ func switchAICommand(ctx *zero.Ctx) {
 		xvars.Bing + "-c",
 		xvars.Bing + "-b",
 		xvars.Bing + "-p",
-		xvars.Bing + "-s",
-		Poe + "-gpt3.5",
-		Poe + "-gpt4",
-		Poe + "-gpt4-32k",
-		Poe + "-claude+",
-		Poe + "-claude100k":
+		xvars.Bing + "-s":
 		deleteConversationContext(ctx)
 		c, err := createConversationContext(ctx, bot)
 		if err != nil {
@@ -555,29 +524,4 @@ func switchAICommand(ctx *zero.Ctx) {
 	lmt.Remove(cctx.Id, cctx.Bot)
 	store.DeleteOnline(cctx.Id)
 	ctx.Send("已切换`" + bot + "`AI模型")
-}
-
-// 尝试解决Bing人机检验
-func handleBingCaptcha(token string, err error) {
-	content := err.Error()
-	if strings.Contains(content, "User needs to solve CAPTCHA to continue") {
-		// content = "用户需要人机验证...  已尝试自动验证，若重新生成文本无效请手动验证。"
-		if strings.Contains(token, "_U=") {
-			split := strings.Split(token, ";")
-			for _, item := range split {
-				if strings.Contains(item, "_U=") {
-					token = strings.TrimSpace(strings.ReplaceAll(item, "_U=", ""))
-					break
-				}
-			}
-		}
-		if e := util.SolveCaptcha(token); e != nil {
-			logrus.Error("尝试解析Bing人机检验失败：", e)
-		}
-	}
-}
-
-func Run(addr string) {
-	cmd.Run(addr)
-	logrus.Info("已开启 `" + addr + "` Web服务")
 }

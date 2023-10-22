@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/FloatTech/floatbox/ctxext"
 	sql "github.com/FloatTech/sqlite"
-	"github.com/bincooo/llm-plugin/vars"
+	"github.com/bincooo/llm-plugin/internal/vars"
 	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"reflect"
@@ -20,18 +20,16 @@ type command struct {
 	sync.RWMutex
 }
 
-type Global struct {
+type GlobalConfig struct {
 	Id        int    `db:"id" json:"id"`
 	Proxy     string `db:"proxy" json:"proxy"`           // 代理
 	NbServ    string `db:"nb_serv" json:"nb_serv"`       // newbing 服务地址
 	Bot       string `db:"bot" json:"bot"`               // AI类型
 	MaxTokens int    `db:"max_tokens" json:"max_tokens"` // openai-api 最大Tokens
 	Preset    string `db:"preset" json:"preset"`         // 默认预设
-	DrawServ  string `db:"draw_serv" json:"draw_serv"`   // AI作画服务地址
-	DrawBody  string `db:"draw_body" json:"draw_body"`   // 作画Json模版
 }
 
-type Token struct {
+type TokenConfig struct {
 	Id      string `db:"id" json:"id"`
 	Key     string `db:"key" json:"key" query:"like"`
 	Type    string `db:"type" json:"type" query:"="` // 类型
@@ -43,7 +41,7 @@ type Token struct {
 	Expire  string `db:"expire" json:"expire"`       // 过期日期
 }
 
-type PresetScene struct {
+type RoleConfig struct {
 	Id      string `db:"id" json:"id"`
 	Key     string `db:"key" json:"key" query:"like"`
 	Type    string `db:"type" json:"type" query:"="` // 类型
@@ -116,17 +114,17 @@ func postRef() (bool, error) {
 	}
 
 	// 初始化数据表
-	err = cmd.sql.Create("global", &Global{})
+	err = cmd.sql.Create("global", &GlobalConfig{})
 	if err != nil {
 		return false, err
 	}
 
-	err = cmd.sql.Create("token", &Token{})
+	err = cmd.sql.Create("token", &TokenConfig{})
 	if err != nil {
 		return false, err
 	}
 
-	err = cmd.sql.Create("preset_scene", &PresetScene{})
+	err = cmd.sql.Create("preset_scene", &RoleConfig{})
 	if err != nil {
 		return false, err
 	}
@@ -200,10 +198,10 @@ func wraptable(table string) string {
 	}
 }
 
-func GetGlobal() Global {
-	var g Global
+func GetGlobal() GlobalConfig {
+	var g GlobalConfig
 	if err := cmd.sql.Find("global", &g, ""); err != nil {
-		g = Global{
+		g = GlobalConfig{
 			Id:  1,
 			Bot: "openai-api",
 		}
@@ -211,7 +209,7 @@ func GetGlobal() Global {
 	return g
 }
 
-func InsertGlobal(g Global) error {
+func InsertGlobal(g GlobalConfig) error {
 	cmd.Lock()
 	defer cmd.Unlock()
 	return cmd.sql.Insert("global", &g)
@@ -225,10 +223,10 @@ func SetProxy(p string) error {
 	return cmd.sql.Insert("global", &global)
 }
 
-func InsertToken(token Token) error {
+func InsertToken(token TokenConfig) error {
 	cmd.Lock()
 	defer cmd.Unlock()
-	var t Token
+	var t TokenConfig
 	err := cmd.sql.Find("token", &t, "where type='"+token.Type+"' and key='"+token.Key+"'")
 	if err != nil {
 		return cmd.sql.Insert("token", &token)
@@ -237,7 +235,7 @@ func InsertToken(token Token) error {
 	}
 }
 
-func UpdateToken(t Token) {
+func UpdateToken(t TokenConfig) {
 	cmd.Lock()
 	defer cmd.Unlock()
 	if err := cmd.sql.Insert("token", &t); err != nil {
@@ -245,8 +243,8 @@ func UpdateToken(t Token) {
 	}
 }
 
-func GetToken(id, key, t string) *Token {
-	var token Token
+func GetToken(id, key, t string) *TokenConfig {
+	var token TokenConfig
 	where := make([]string, 0)
 	if id != "" {
 		where = append(where, " id='"+id+"'")
@@ -270,11 +268,11 @@ func GetToken(id, key, t string) *Token {
 	return &token
 }
 
-func FindTokens(t string) ([]*Token, error) {
+func FindTokens(t string) ([]*TokenConfig, error) {
 	if t != "" {
-		return sql.FindAll[Token](cmd.sql, "token", "where type='"+t+"'")
+		return sql.FindAll[TokenConfig](cmd.sql, "token", "where type='"+t+"'")
 	} else {
-		return sql.FindAll[Token](cmd.sql, "token", "")
+		return sql.FindAll[TokenConfig](cmd.sql, "token", "")
 	}
 }
 
@@ -282,8 +280,8 @@ func RemoveToken(key string) {
 	cmd.sql.Del("token", "where key='"+key+"'")
 }
 
-func GetPresetScene(id, key, t string) *PresetScene {
-	var p PresetScene
+func GetPresetScene(id, key, t string) *RoleConfig {
+	var p RoleConfig
 	where := make([]string, 0)
 	if id != "" {
 		where = append(where, " id='"+id+"'")
@@ -307,10 +305,10 @@ func GetPresetScene(id, key, t string) *PresetScene {
 	return &p
 }
 
-func FindPresetScenes(t string) ([]*PresetScene, error) {
+func FindPresetScenes(t string) ([]*RoleConfig, error) {
 	if t != "" {
-		return sql.FindAll[PresetScene](cmd.sql, "preset_scene", "where type='"+t+"'")
+		return sql.FindAll[RoleConfig](cmd.sql, "preset_scene", "where type='"+t+"'")
 	} else {
-		return sql.FindAll[PresetScene](cmd.sql, "preset_scene", "")
+		return sql.FindAll[RoleConfig](cmd.sql, "preset_scene", "")
 	}
 }

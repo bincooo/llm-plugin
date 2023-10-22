@@ -2,31 +2,31 @@ package store
 
 import "sync"
 
-type OKv struct {
+type OKeyv struct {
 	Id   string
 	Name string
 }
 
 var (
-	onlineMu    sync.RWMutex
-	onlineStore = make(map[string][]OKv)
+	omu         sync.RWMutex
+	onlineStore = make(map[string][]OKeyv)
 )
 
-func CacheOnline(uid string, messages []OKv) {
-	onlineMu.Lock()
-	defer onlineMu.Unlock()
+func CacheOnline(uid string, messages []OKeyv) {
+	omu.Lock()
+	defer omu.Unlock()
 	onlineStore[uid] = messages
 }
 
 func DeleteOnline(uid string) {
-	onlineMu.Lock()
-	defer onlineMu.Unlock()
+	omu.Lock()
+	defer omu.Unlock()
 	delete(onlineStore, uid)
 }
 
-func GetOnline(uid string) []OKv {
+func GetOnline(uid string) []OKeyv {
 	if result, ok := onlineStore[uid]; ok {
 		return result
 	}
-	return make([]OKv, 0)
+	return make([]OKeyv, 0)
 }

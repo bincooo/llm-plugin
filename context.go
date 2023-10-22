@@ -1,7 +1,6 @@
 package llm
 
 import (
-	"context"
 	"errors"
 	"github.com/FloatTech/floatbox/web"
 	"github.com/google/uuid"
@@ -19,7 +18,6 @@ import (
 
 	autotypes "github.com/bincooo/chatgpt-adapter/types"
 	claudevars "github.com/bincooo/claude-api/vars"
-	wapi "github.com/bincooo/openai-wapi"
 	zero "github.com/wdvxdr1123/ZeroBot"
 )
 
@@ -29,7 +27,6 @@ var (
 )
 
 const (
-	Poe       = "poe"
 	BaseChain = ""
 )
 
@@ -93,25 +90,6 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 		bot = vars.Bing
 	}
 
-	// POE
-	if strings.HasPrefix(bot, Poe) {
-		switch bot {
-		case Poe + "-gpt3.5":
-			model = "gpt-3.5-turbo"
-		case Poe + "-gpt4":
-			model = "gpt-4"
-		case Poe + "-gpt4-32k":
-			model = "gpt-4-32k"
-		case Poe + "-claude+":
-			model = "Claude+"
-		case Poe + "-claude100k":
-			model = "Claude-instant-100k"
-		default:
-			model = "gpt-3.5-turbo"
-		}
-		bot = Poe
-	}
-
 	tokens, err := repo.FindTokens(bot)
 	if err != nil {
 		return autotypes.ConversationContext{}, errors.New("查询凭证失败, 请先添加`" + bot + "`凭证")
@@ -155,9 +133,9 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 	if bot == vars.OpenAIWeb {
 		// 检查失效
 		cctx.BaseURL = "https://ai.fakeopen.com/api"
-		if err := checkWebOpenai(tokens[0], global.Proxy); err != nil {
-			return cctx, err
-		}
+		//if err := checkWebOpenai(tokens[0], global.Proxy); err != nil {
+		//	return cctx, err
+		//}
 		//// 为空，尝试登陆
 		//if tokens[0].Token == "" {
 		//	if err := loginWebOpenai(*tokens[0], global); err != nil {
@@ -210,46 +188,46 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 }
 
 // 登陆网页版
-func loginWebOpenai(token repo.Token, global repo.Global) error {
-	t, err := wapi.WebLogin(token.Email, token.Passwd, global.Proxy)
-	if err != nil {
-		return errors.New("OpenAI WEB `" + token.Key + "`登陆失败: " + err.Error())
-	}
-	token.Token = t
-	token.Expire = time.Now().Add(15 * 24 * time.Hour).Format("2006-01-02 15:04:05")
-	repo.UpdateToken(token)
-	return nil
-}
+//func loginWebOpenai(token repo.Token, global repo.Global) error {
+//	t, err := wapi.WebLogin(token.Email, token.Passwd, global.Proxy)
+//	if err != nil {
+//		return errors.New("OpenAI WEB `" + token.Key + "`登陆失败: " + err.Error())
+//	}
+//	token.Token = t
+//	token.Expire = time.Now().Add(15 * 24 * time.Hour).Format("2006-01-02 15:04:05")
+//	repo.UpdateToken(token)
+//	return nil
+//}
 
 // 检查余额
-func checkApiOpenai(token repo.Token, proxy string) error {
-	if billing, _ := wapi.Query(context.Background(), token.Token, proxy); billing == nil || billing.System-billing.Soft < 0 {
-		return errors.New("Err: `" + token.Key + "`凭证余额为0")
-	}
-	return nil
-}
+//func checkApiOpenai(token repo.Token, proxy string) error {
+//	if billing, _ := wapi.Query(context.Background(), token.Token, proxy); billing == nil || billing.System-billing.Soft < 0 {
+//		return errors.New("Err: `" + token.Key + "`凭证余额为0")
+//	}
+//	return nil
+//}
 
 // 检查过期时间
-func checkWebOpenai(token *repo.Token, proxy string) error {
-	if token.Expire != "" && token.Expire != "-1" {
-		expire, err := time.Parse("2006-01-02 15:04:05", token.Expire)
-		if err != nil {
-			return errors.New("warning：[" + token.Key + "] `" + token.Expire + "`过期日期解析有误")
-		}
-
-		if expire.Before(time.Now()) {
-			// 已过期
-			t, err := wapi.WebLogin(token.Email, token.Passwd, proxy)
-			if err != nil {
-				return errors.New("OpenAI WEB `" + t + "`登陆失败: " + err.Error())
-			}
-			token.Token = t
-			token.Expire = time.Now().Add(14 * 24 * time.Hour).Format("2006-01-02 15:04:05")
-			repo.UpdateToken(*token)
-		}
-	}
-	return nil
-}
+//func checkWebOpenai(token *repo.Token, proxy string) error {
+//	if token.Expire != "" && token.Expire != "-1" {
+//		expire, err := time.Parse("2006-01-02 15:04:05", token.Expire)
+//		if err != nil {
+//			return errors.New("warning：[" + token.Key + "] `" + token.Expire + "`过期日期解析有误")
+//		}
+//
+//		if expire.Before(time.Now()) {
+//			// 已过期
+//			t, err := wapi.WebLogin(token.Email, token.Passwd, proxy)
+//			if err != nil {
+//				return errors.New("OpenAI WEB `" + t + "`登陆失败: " + err.Error())
+//			}
+//			token.Token = t
+//			token.Expire = time.Now().Add(14 * 24 * time.Hour).Format("2006-01-02 15:04:05")
+//			repo.UpdateToken(*token)
+//		}
+//	}
+//	return nil
+//}
 
 func parseMessage(ctx *zero.Ctx) string {
 	// and more...
