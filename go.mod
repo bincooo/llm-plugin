@@ -8,7 +8,7 @@ require (
 	github.com/FloatTech/sqlite v1.6.3
 	github.com/FloatTech/zbpctrl v1.6.0
 	github.com/FloatTech/zbputils v1.7.0
-	github.com/bincooo/chatgpt-adapter v1.0.13-0.20231023080510-7846e15e7db3
+	github.com/bincooo/chatgpt-adapter v1.0.13-0.20231023102646-0a757be149f2
 	github.com/bincooo/claude-api v1.0.3
 	github.com/bincooo/edge-api v1.0.1
 	github.com/google/uuid v1.3.1
@@ -27,6 +27,7 @@ require (
 	github.com/acheong08/OpenAIAuth v0.0.0-20230625142757-7b01ccd04f63 // indirect
 	github.com/aliyun/aliyun-oss-go-sdk v2.2.7+incompatible // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
+	github.com/bincooo/go-openai v0.0.0-20231023102128-e9d3ccb5c34b // indirect
 	github.com/bincooo/openai-wapi v1.0.1 // indirect
 	github.com/bincooo/requests v0.0.0-20230720064210-7eae5d6c9d1e // indirect
 	github.com/bitly/go-simplejson v0.5.0 // indirect
@@ -60,7 +61,6 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20220927061507-ef77025ab5aa // indirect
 	github.com/samber/go-gpt-3-encoder v0.3.1 // indirect
 	github.com/samber/lo v1.37.0 // indirect
-	github.com/sashabaranov/go-openai v1.16.0 // indirect
 	github.com/stretchr/testify v1.8.3 // indirect
 	github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
