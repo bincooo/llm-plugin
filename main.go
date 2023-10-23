@@ -701,20 +701,20 @@ func switchAICommand(ctx *zero.Ctx) {
 func waitCommand(ctx *zero.Ctx, timeout time.Duration, tips string, cmd []string) int {
 	cmdtips := ""
 	for i, c := range cmd {
-		cmdtips += "[" + strconv.Itoa(i) + "]: " + c + "\n"
+		cmdtips += "[" + strconv.Itoa(i) + "] : " + c + "\n"
 	}
-	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(tips+"\n发送序号:\n"+cmdtips+" \n发送\"取消\"终止执行"))
-	recv, cancel := zero.NewFutureEvent("message", 999, false, zero.RegexRule(`^(取消|\d+)$`), zero.CheckUser(ctx.Event.UserID)).Repeat()
+	ctx.SendChain(message.At(ctx.Event.UserID), message.Text(tips+"\n发送序号:\n"+cmdtips+" \n发送\"取消\"终止执行"))
+	recv, cancel := zero.NewFutureEvent("message", 999, true, zero.RegexRule(`^(取消|\d+)$`), zero.CheckUser(ctx.Event.UserID)).Repeat()
 	defer cancel()
 	for {
 		select {
 		case <-time.After(timeout):
-			ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("等待超时，已取消")))
+			ctx.SendChain(message.At(ctx.Event.UserID), message.Text("等待超时，已取消"))
 			return -1
 		case r := <-recv:
 			nextcmd := r.Event.Message.String()
 			if nextcmd == "取消" {
-				ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text("已取消")))
+				ctx.SendChain(message.At(ctx.Event.UserID), message.Text("已取消"))
 				return -1
 			}
 			index, err := strconv.Atoi(nextcmd)
