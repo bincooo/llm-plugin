@@ -19,6 +19,7 @@ AppId = "[APP_ID]"
 Token = "[TOKEN]"
 MaxTokens = [MAX_TOKENS]
 BaseURL = "[BASE_URL]"
+Images = [IMAGES]
 `
 
 const roleTpl = `

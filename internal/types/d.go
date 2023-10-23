@@ -4,6 +4,7 @@ type ConversationContextArgs struct {
 	Current  string
 	Nickname string
 
-	Pid string
+	Rid string
+	Tid string
 	Tts string
 }

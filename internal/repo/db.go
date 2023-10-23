@@ -32,6 +32,7 @@ type TokenConfig struct {
 	Token     string `db:"token"`      // 凭证
 	BaseURL   string `db:"base_url"`   // 代理转发
 	MaxTokens int    `db:"max_tokens"` // openai-api 最大Tokens
+	Images    int    `db:"images"`     // 是否支持图片识别
 }
 
 type RoleConfig struct {

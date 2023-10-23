@@ -69,9 +69,9 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 		return cctx, nil
 	}
 
-	global := repo.GetGlobal()
+	g := repo.GetGlobal()
 	if bot == "" {
-		bot = global.Bot
+		bot = g.Bot
 	}
 
 	model := ""
@@ -97,6 +97,7 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 	if len(tokens) == 0 {
 		return autotypes.ConversationContext{}, errors.New("无可用的凭证")
 	}
+	dbToken := tokens[0]
 
 	if strings.HasPrefix(bot, vars.Claude) {
 		if bot == vars.Claude+"-web" {
@@ -108,83 +109,88 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 	}
 
 	maxTokens := 4000
-	if tokens[0].MaxTokens != 0 {
-		maxTokens = tokens[0].MaxTokens
+	if dbToken.MaxTokens != 0 {
+		maxTokens = dbToken.MaxTokens
 	}
 
 	args := types.ConversationContextArgs{
-		Pid: "-1",
+		Rid: "-1",
+		Tid: "-1",
 	}
+
+	logrus.Infoln("[MiaoX] - 代理地址： ", g.Proxy)
 	cctx := autotypes.ConversationContext{
 		Id:        key,
 		Bot:       bot,
 		MaxTokens: maxTokens,
 		Chain:     BaseChain,
 		Model:     model,
-		Proxy:     global.Proxy,
+		Proxy:     g.Proxy,
 	}
 
 	if bot == vars.OpenAIAPI {
-		if tokens[0].AppId != "" {
-			cctx.Model = tokens[0].AppId
+		if dbToken.AppId != "" {
+			cctx.Model = dbToken.AppId
 		}
 	}
 
 	if bot == vars.OpenAIWeb {
-		// 检查失效
 		cctx.BaseURL = "https://ai.fakeopen.com/api"
 	}
 
 	if bot == vars.Claude {
-		cctx.AppId = tokens[0].AppId
+		cctx.AppId = dbToken.AppId
 	}
 
 	// 默认预设
-	if global.Role != "" {
+	if g.Role != "" {
 		suf := ""
 		if bot == vars.Claude && model == claudevars.Model4WebClaude2 {
 			suf = "-web"
 		}
-		preset := repo.GetRole("", global.Role, bot+suf)
-		if preset == nil {
-			logrus.Warn("预设`", global.Role, "`不存在")
-		} else if preset.Type != bot+suf {
-			logrus.Warn("预设`", global.Role, "`类型不匹配, 需要（", bot, "）实际为（", preset.Type, "）")
+		role := repo.GetRole("", g.Role, bot+suf)
+		if role == nil {
+			logrus.Warn("预设`", g.Role, "`不存在")
+		} else if role.Type != bot+suf {
+			logrus.Warn("预设`", g.Role, "`类型不匹配, 需要（", bot, "）实际为（", role.Type, "）")
 		} else {
-			args.Pid = preset.Id
-			cctx.Preset = preset.Content
-			cctx.Format = preset.Message
-			if preset.Chain != "" {
-				cctx.Chain += preset.Chain
+			args.Rid = role.Id
+			cctx.Preset = role.Content
+			cctx.Format = role.Message
+			if role.Chain != "" {
+				cctx.Chain += role.Chain
 			}
 		}
 	}
 
-	if tokens[0].BaseURL != "" {
-		cctx.BaseURL = tokens[0].BaseURL
+	args.Tid = dbToken.Id
+	cctx.Data = args
+	cctx.Token = dbToken.Token
+	if dbToken.BaseURL != "" {
+		cctx.BaseURL = dbToken.BaseURL
 		logrus.Infoln("[MiaoX] - AI转发地址： ", cctx.BaseURL)
 	}
-
-	cctx.Token = tokens[0].Token
-	cctx.Data = args
 
 	updateConversationContext(cctx)
 	logrus.Infoln("[MiaoX] - 创建新的ConversationContext： ", key)
 	return cctx, nil
 }
 
-func parseMessage(ctx *zero.Ctx) string {
+func parseMessage(ctx *zero.Ctx, images bool) string {
 	// and more...
 	text := ctx.ExtractPlainText()
-	picture := tryPicture(ctx)
-	if picture != "" {
-		imgdata, err := web.GetData(picture)
+	if !images {
+		return text
+	}
+
+	if image := tryImage(ctx); image != "" {
+		data, err := web.GetData(image)
 		if err != nil {
 			logrus.Error(err)
 			goto label
 		}
 		path := "data/" + uuid.NewString() + ".jpg"
-		err = os.WriteFile(path, imgdata, 0666)
+		err = os.WriteFile(path, data, 0666)
 		if err != nil {
 			logrus.Error(err)
 			goto label
@@ -199,8 +205,8 @@ label:
 	return text
 }
 
-// tryPicture 消息含有图片返回
-func tryPicture(ctx *zero.Ctx) string {
+// tryImage 消息含有图片返回
+func tryImage(ctx *zero.Ctx) string {
 	messages := ctx.Event.Message
 	for _, msg := range messages {
 		if msg.Type != "reply" {

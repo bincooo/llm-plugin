@@ -4,7 +4,6 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/FloatTech/zbputils/control"
 	"github.com/FloatTech/zbputils/ctxext"
-	"github.com/bincooo/chatgpt-adapter"
 	"github.com/bincooo/llm-plugin/internal/chain"
 	"github.com/bincooo/llm-plugin/internal/repo"
 	"github.com/bincooo/llm-plugin/internal/repo/store"
@@ -20,6 +19,7 @@ import (
 	"time"
 
 	ctrl "github.com/FloatTech/zbpctrl"
+	adapter "github.com/bincooo/chatgpt-adapter"
 	adstore "github.com/bincooo/chatgpt-adapter/store"
 	adtypes "github.com/bincooo/chatgpt-adapter/types"
 	advars "github.com/bincooo/chatgpt-adapter/vars"
@@ -287,24 +287,30 @@ func conversationCommand(ctx *zero.Ctx) {
 		return
 	}
 
-	prompt := parseMessage(ctx)
+	args := cctx.Data.(types.ConversationContextArgs)
+	args.Current = strconv.FormatInt(ctx.Event.Sender.ID, 10)
+	args.Nickname = ctx.Event.Sender.NickName
+	cctx.Data = args
+
+	images := false
+	if dbToken := repo.GetToken(args.Tid, "", ""); dbToken != nil {
+		images = dbToken.Images == 1
+	}
+
+	prompt := parseMessage(ctx, images)
 	messageId := reply.Data["id"]
 
 	// 限制对话长度
-	if len([]rune(prompt)) > 500 {
+	if len([]rune(prompt)) > 300 {
 		ctx.SendChain(reply, message.Text(BB[rand.Intn(len(BB))]))
 		return
 	}
 
 	cctx.Prompt = prompt
 	cctx.MessageId = messageId
-	args := cctx.Data.(types.ConversationContextArgs)
-	args.Current = strconv.FormatInt(ctx.Event.Sender.ID, 10)
-	args.Nickname = ctx.Event.Sender.NickName
-	cctx.Data = args
 
 	section := false
-	if role := repo.GetRole(args.Pid, "", ""); role != nil {
+	if role := repo.GetRole(args.Rid, "", ""); role != nil {
 		section = role.Section == 1
 	}
 
@@ -329,6 +335,7 @@ func conversationCommand(ctx *zero.Ctx) {
 		}
 
 		if response.Error != nil {
+			logrus.Error(response.Error)
 			go util.HandleBingCaptcha(cctx.Token, response.Error)
 			ctx.SendChain(reply, message.Text(response.Error))
 			return
@@ -540,7 +547,7 @@ func switchRoleCommand(ctx *zero.Ctx) {
 	}
 
 	args := cctx.Data.(types.ConversationContextArgs)
-	args.Pid = role.Id
+	args.Rid = role.Id
 	cctx.Data = args
 
 	cctx.Preset = role.Content

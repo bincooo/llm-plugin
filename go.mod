@@ -5,16 +5,16 @@ go 1.20
 require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/FloatTech/floatbox v0.0.0-20230331064925-9af336a84944
-	github.com/FloatTech/sqlite v1.6.2
-	github.com/FloatTech/zbpctrl v1.5.3-0.20230514154630-b74e6fcca380
-	github.com/FloatTech/zbputils v1.6.2-0.20230903052647-820a67856603
-	github.com/bincooo/chatgpt-adapter v1.0.13-0.20231022085914-01bed3c1b991
+	github.com/FloatTech/sqlite v1.6.3
+	github.com/FloatTech/zbpctrl v1.6.0
+	github.com/FloatTech/zbputils v1.7.0
+	github.com/bincooo/chatgpt-adapter v1.0.13-0.20231023080510-7846e15e7db3
 	github.com/bincooo/claude-api v1.0.3
 	github.com/bincooo/edge-api v1.0.1
 	github.com/google/uuid v1.3.1
 	github.com/pp-group/edge-tts-go v1.1.2
 	github.com/sirupsen/logrus v1.9.3
-	github.com/wdvxdr1123/ZeroBot v1.7.4
+	github.com/wdvxdr1123/ZeroBot v1.7.5-0.20231009162356-57f71b9f5258
 )
 
 require (
