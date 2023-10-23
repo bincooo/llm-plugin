@@ -168,18 +168,6 @@ func aiCommand(ctx *zero.Ctx) {
 	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(tex))
 }
 
-// 自定义优先级
-//func excludeOnMessage(ctx *zero.Ctx) bool {
-//	msg := ctx.MessageString()
-//	exclude := []string{"AI列表", "添加凭证 ", "删除凭证 ", "凭证列表", "切换", "开启", "预设列表", "历史对话", "语音列表", "/", "!"}
-//	for _, value := range exclude {
-//		if strings.HasPrefix(msg, value) {
-//			return false
-//		}
-//	}
-//	return true
-//}
-
 func historyCommand(ctx *zero.Ctx) {
 	key := getId(ctx)
 	messages := autostore.GetMessages(key)
@@ -273,10 +261,6 @@ func conversationCommand(ctx *zero.Ctx) {
 	args.Current = strconv.FormatInt(ctx.Event.Sender.ID, 10)
 	args.Nickname = ctx.Event.Sender.NickName
 	cctx.Data = args
-	// 使用了poe-openai-proxy
-	if cctx.Bot == Poe {
-		cctx.Bot = xvars.OpenAIAPI
-	}
 
 	section := false
 	presetScene := repo.GetPresetScene(args.PresetId, "", "")
@@ -425,10 +409,6 @@ func switchTokensCommand(ctx *zero.Ctx) {
 	}
 
 	bot := cctx.Bot
-	if bot == Poe {
-		bot = xvars.OpenAIAPI
-	}
-
 	args := cctx.Data.(types.ConversationContextArgs)
 	args.TokenId = token.Id
 	cctx.Data = args
@@ -495,9 +475,6 @@ func switchPresetSceneCommand(ctx *zero.Ctx) {
 	cctx.Format = presetScene.Message
 	cctx.Chain = BaseChain + presetScene.Chain
 	bot := cctx.Bot
-	if bot == Poe {
-		bot = xvars.OpenAIAPI
-	}
 
 	lmt.Remove(cctx.Id, bot)
 	store.DeleteOnline(cctx.Id)
@@ -534,12 +511,7 @@ func switchAICommand(ctx *zero.Ctx) {
 		xvars.Bing + "-c",
 		xvars.Bing + "-b",
 		xvars.Bing + "-p",
-		xvars.Bing + "-s",
-		Poe + "-gpt3.5",
-		Poe + "-gpt4",
-		Poe + "-gpt4-32k",
-		Poe + "-claude+",
-		Poe + "-claude100k":
+		xvars.Bing + "-s":
 		deleteConversationContext(ctx)
 		c, err := createConversationContext(ctx, bot)
 		if err != nil {
