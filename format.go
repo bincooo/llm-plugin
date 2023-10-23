@@ -56,6 +56,7 @@ func formatToken(token *repo.TokenConfig) string {
 	content = strings.Replace(content, "[APP_ID]", token.AppId, -1)
 	content = strings.Replace(content, "[TOKEN]", token.Token, -1)
 	content = strings.Replace(content, "[MAX_TOKENS]", strconv.Itoa(token.MaxTokens), -1)
+	content = strings.Replace(content, "[IMAGES]", strconv.Itoa(token.Images), -1)
 	content = strings.Replace(content, "[BASE_URL]", token.BaseURL, -1)
 	return content
 }

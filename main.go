@@ -110,17 +110,17 @@ func init() {
 		return ctx.Event.NoticeType == "group_recall" || ctx.Event.NoticeType == "friend_recall"
 	}, repo.OnceOnSuccess).SetBlock(false).Handle(recallMessageCommand)
 
-	engine.OnFullMatch("全局属性", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnFullMatch("全局属性", zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(globalCommand)
-	engine.OnRegex(`^修改全局属性\s+([\s\S]*)$`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^修改全局属性\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(editGlobalCommand)
-	engine.OnRegex(`^添加凭证\s+([\s\S]*)$`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^添加凭证\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(insertTokenCommand)
-	engine.OnRegex(`^删除凭证\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^删除凭证\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(deleteTokenCommand)
 	engine.OnFullMatch("凭证列表", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(tokensCommand)
-	engine.OnRegex(`^凭证明细\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^凭证明细\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(tokenItemCommand)
 	engine.OnRegex(`^切换凭证\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTokensCommand)
@@ -128,13 +128,13 @@ func init() {
 		Handle(aiCommand)
 	engine.OnRegex(`切换AI\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchAICommand)
-	engine.OnRegex(`^添加预设\s+([\s\S]*)$`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^添加预设\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(insertRoleCommand)
-	engine.OnRegex(`^删除预设\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^删除预设\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(deleteRoleCommand)
 	engine.OnFullMatch("预设列表", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(rolesCommand)
-	engine.OnRegex(`^预设明细\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^预设明细\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(roleItemCommand)
 	engine.OnRegex(`[开启|切换]预设\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchRoleCommand)
@@ -389,6 +389,7 @@ func insertTokenCommand(ctx *zero.Ctx) {
 	dbToken := repo.GetToken("", newToken.Key, newToken.Type)
 	if dbToken != nil {
 		// 等待用户下一步选择
+		time.Sleep(3 * time.Second)
 		if index := waitCommand(ctx, time.Second*60, "已存在相同的凭证，是否覆盖？", []string{"否", "是"}); index < 1 {
 			if index == 0 {
 				ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
