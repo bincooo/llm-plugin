@@ -583,12 +583,19 @@ func insertRoleCommand(ctx *zero.Ctx) {
 	value := ctx.State["regex_matched"].([]string)[1]
 	value = strings.ReplaceAll(value, "&#91;", "[")
 	value = strings.ReplaceAll(value, "&#93;", "]")
+	value = strings.ReplaceAll(value, `\n`, "[!n]")
+	value = strings.ReplaceAll(value, `\"`, "[!d]")
 
 	var newRole repo.RoleConfig
 	if _, err := toml.Decode(value, &newRole); err != nil {
 		logrus.Error(err)
 		ctx.Send("添加失败，请按格式填写：" + err.Error())
 		return
+	}
+
+	if newRole.Content != "" {
+		newRole.Content = strings.ReplaceAll(newRole.Content, "[!n]", `\n`)
+		newRole.Content = strings.ReplaceAll(newRole.Content, "[!d]", `\"`)
 	}
 
 	if !validateType(newRole.Type) {

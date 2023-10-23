@@ -179,7 +179,7 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 func parseMessage(ctx *zero.Ctx, images bool) string {
 	// and more...
 	text := ctx.ExtractPlainText()
-	if !images {
+	if !images || strings.TrimSpace(text) == "" {
 		return text
 	}
 
