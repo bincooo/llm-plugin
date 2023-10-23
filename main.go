@@ -46,7 +46,7 @@ var (
 		Brief:             "喵小爱-AI适配器",
 		DisableOnDefault:  false,
 		PrivateDataFolder: "miaox",
-	})
+	}).ApplySingle(ctxext.DefaultSingle)
 
 	tts TTSMaker
 

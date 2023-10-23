@@ -3,22 +3,21 @@ module github.com/bincooo/llm-plugin
 go 1.20
 
 require (
+	github.com/BurntSushi/toml v1.3.2
 	github.com/FloatTech/floatbox v0.0.0-20230331064925-9af336a84944
 	github.com/FloatTech/sqlite v1.6.2
 	github.com/FloatTech/zbpctrl v1.5.3-0.20230514154630-b74e6fcca380
-	github.com/FloatTech/zbputils v1.6.2-0.20230514154857-9363fdb11fd6
+	github.com/FloatTech/zbputils v1.6.2-0.20230903052647-820a67856603
 	github.com/bincooo/chatgpt-adapter v1.0.13-0.20231022085914-01bed3c1b991
 	github.com/bincooo/claude-api v1.0.3
 	github.com/bincooo/edge-api v1.0.1
-	github.com/bincooo/openai-wapi v1.0.1
 	github.com/google/uuid v1.3.1
 	github.com/pp-group/edge-tts-go v1.1.2
 	github.com/sirupsen/logrus v1.9.3
-	github.com/wdvxdr1123/ZeroBot v1.6.11
+	github.com/wdvxdr1123/ZeroBot v1.7.4
 )
 
 require (
-	github.com/BurntSushi/toml v1.3.2 // indirect
 	github.com/FloatTech/gg v1.1.2 // indirect
 	github.com/FloatTech/imgfactory v0.2.2-0.20230315152233-49741fc994f9 // indirect
 	github.com/FloatTech/rendercard v0.0.10-0.20230223064326-45d29fa4ede9 // indirect
@@ -28,6 +27,7 @@ require (
 	github.com/acheong08/OpenAIAuth v0.0.0-20230625142757-7b01ccd04f63 // indirect
 	github.com/aliyun/aliyun-oss-go-sdk v2.2.7+incompatible // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
+	github.com/bincooo/openai-wapi v1.0.1 // indirect
 	github.com/bincooo/requests v0.0.0-20230720064210-7eae5d6c9d1e // indirect
 	github.com/bitly/go-simplejson v0.5.0 // indirect
 	github.com/bogdanfinn/fhttp v0.5.19 // indirect
