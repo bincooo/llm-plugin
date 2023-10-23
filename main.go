@@ -161,6 +161,9 @@ func globalCommand(ctx *zero.Ctx) {
 // 修改全局属性
 func editGlobalCommand(ctx *zero.Ctx) {
 	value := ctx.State["regex_matched"].([]string)[1]
+	value = strings.ReplaceAll(value, "&#91;", "[")
+	value = strings.ReplaceAll(value, "&#93;", "]")
+
 	var g repo.GlobalConfig
 	if _, err := toml.Decode(value, &g); err != nil {
 		logrus.Error(err)
@@ -168,10 +171,15 @@ func editGlobalCommand(ctx *zero.Ctx) {
 		return
 	}
 
+	if !validateBot(g.Bot) {
+		ctx.Send("修改失败，AI类型不正确。可使用：[AI列表] 命令查看")
+		return
+	}
+
 	dbg := repo.GetGlobal()
 	if dbg != nil {
 		// 等待用户下一步选择
-		if index := waitCommand(ctx, time.Second*60, "已存在相同的凭证，是否覆盖？", []string{"否", "是"}); index < 1 {
+		if index := waitCommand(ctx, time.Second*60, "已存在相同的全局属性，是否覆盖？", []string{"否", "是"}); index < 1 {
 			if index == 0 {
 				ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
 			}
@@ -379,10 +387,18 @@ func conversationCommand(ctx *zero.Ctx) {
 // 添加凭证
 func insertTokenCommand(ctx *zero.Ctx) {
 	value := ctx.State["regex_matched"].([]string)[1]
+	value = strings.ReplaceAll(value, "&#91;", "[")
+	value = strings.ReplaceAll(value, "&#93;", "]")
+
 	var newToken repo.TokenConfig
 	if _, err := toml.Decode(value, &newToken); err != nil {
 		logrus.Error(err)
 		ctx.Send("添加失败，请按格式填写：" + err.Error())
+		return
+	}
+
+	if !validateBot(newToken.Type) {
+		ctx.Send("修改失败，AI类型不正确。可使用：[AI列表] 命令查看")
 		return
 	}
 
@@ -565,10 +581,23 @@ func switchRoleCommand(ctx *zero.Ctx) {
 // 添加预设
 func insertRoleCommand(ctx *zero.Ctx) {
 	value := ctx.State["regex_matched"].([]string)[1]
+	value = strings.ReplaceAll(value, "&#91;", "[")
+	value = strings.ReplaceAll(value, "&#93;", "]")
+
 	var newRole repo.RoleConfig
 	if _, err := toml.Decode(value, &newRole); err != nil {
 		logrus.Error(err)
 		ctx.Send("添加失败，请按格式填写：" + err.Error())
+		return
+	}
+
+	if !validateType(newRole.Type) {
+		ctx.Send("修改失败，AI类型不正确。请选择以下类型：\n - " +
+			advars.OpenAIAPI + "\n - " +
+			advars.OpenAIWeb + "\n - " +
+			advars.Claude + "\n - " +
+			advars.Claude + "-web\n - " +
+			advars.Bing)
 		return
 	}
 
@@ -703,23 +732,23 @@ func waitCommand(ctx *zero.Ctx, timeout time.Duration, tips string, cmd []string
 	for i, c := range cmd {
 		cmdtips += "[" + strconv.Itoa(i) + "] : " + c + "\n"
 	}
-	ctx.SendChain(message.At(ctx.Event.UserID), message.Text(tips+"\n发送序号:\n"+cmdtips+" \n发送\"取消\"终止执行"))
+	ctx.Send(message.Text(tips + "\n发送序号:\n" + cmdtips + " \n发送\"取消\"终止执行"))
 	recv, cancel := zero.NewFutureEvent("message", 999, true, zero.RegexRule(`^(取消|\d+)$`), zero.CheckUser(ctx.Event.UserID)).Repeat()
 	defer cancel()
 	for {
 		select {
 		case <-time.After(timeout):
-			ctx.SendChain(message.At(ctx.Event.UserID), message.Text("等待超时，已取消"))
+			ctx.Send(message.Text("等待超时，已取消"))
 			return -1
 		case r := <-recv:
 			nextcmd := r.Event.Message.String()
 			if nextcmd == "取消" {
-				ctx.SendChain(message.At(ctx.Event.UserID), message.Text("已取消"))
+				ctx.Send(message.Text("已取消"))
 				return -1
 			}
 			index, err := strconv.Atoi(nextcmd)
 			if err != nil || index < 0 || index > len(cmd)-1 {
-				ctx.SendChain(message.At(ctx.Event.UserID), message.Text("请输入正确的序号"))
+				ctx.Send(message.Text("请输入正确的序号"))
 				continue
 			}
 			return index
