@@ -46,7 +46,7 @@ var (
 		Brief:             "喵小爱-AI适配器",
 		DisableOnDefault:  false,
 		PrivateDataFolder: "miaox",
-	}).ApplySingle(ctxext.DefaultSingle)
+	})
 
 	tts TTSMaker
 
@@ -107,9 +107,9 @@ func init() {
 	}
 	engine.OnFullMatch("全局属性", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(globalCommand)
-	engine.OnRegex(`^修改全局属性\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^修改全局属性\s+([\s\S]*)$`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(editGlobalCommand)
-	engine.OnRegex(`^添加凭证\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^添加凭证\s+([\s\S]*)$`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(insertTokenCommand)
 	engine.OnRegex(`^删除凭证\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(deleteTokenCommand)
@@ -117,13 +117,13 @@ func init() {
 		Handle(tokensCommand)
 	engine.OnRegex(`^凭证明细\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(tokenItemCommand)
-	engine.OnRegex(`^切换凭证\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnRegex(`^切换凭证\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTokensCommand)
 	engine.OnFullMatch("AI列表", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(aiCommand)
-	engine.OnRegex(`切换AI\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnRegex(`切换AI\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchAICommand)
-	engine.OnRegex(`^添加预设\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^添加预设\s+([\s\S]*)$`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(insertRoleCommand)
 	engine.OnRegex(`^删除预设\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(deleteRoleCommand)
@@ -150,7 +150,10 @@ func init() {
 
 func globalCommand(ctx *zero.Ctx) {
 	g := repo.GetGlobal()
-	ctx.Send(ctxext.FakeSenderForwardNode(ctx, message.Text(formatGlobal(g))))
+
+	msg := make(message.Message, 1)
+	msg[0] = ctxext.FakeSenderForwardNode(ctx, message.Text(formatGlobal(g)))
+	ctx.Send(msg)
 }
 
 // 修改全局属性
@@ -166,8 +169,10 @@ func editGlobalCommand(ctx *zero.Ctx) {
 	dbg := repo.GetGlobal()
 	if dbg != nil {
 		// 等待用户下一步选择
-		if 1 > waitCommand(ctx, time.Second*60, "已存在相同的凭证，是否覆盖？", []string{"否", "是"}) {
-			ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
+		if index := waitCommand(ctx, time.Second*60, "已存在相同的凭证，是否覆盖？", []string{"否", "是"}); index < 1 {
+			if index == 0 {
+				ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
+			}
 			return
 		}
 		g.Id = dbg.Id
@@ -375,8 +380,10 @@ func insertTokenCommand(ctx *zero.Ctx) {
 	dbToken := repo.GetToken("", newToken.Key, newToken.Type)
 	if dbToken != nil {
 		// 等待用户下一步选择
-		if 1 > waitCommand(ctx, time.Second*60, "已存在相同的凭证，是否覆盖？", []string{"否", "是"}) {
-			ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
+		if index := waitCommand(ctx, time.Second*60, "已存在相同的凭证，是否覆盖？", []string{"否", "是"}); index < 1 {
+			if index == 0 {
+				ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
+			}
 			return
 		}
 		newToken.Id = dbToken.Id
@@ -410,7 +417,6 @@ func deleteTokenCommand(ctx *zero.Ctx) {
 		}
 		index = waitCommand(ctx, time.Second*60, "请选择你要删除的凭证", cmd)
 		if index == -1 {
-			ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
 			return
 		}
 	}
@@ -470,7 +476,7 @@ func tokensCommand(ctx *zero.Ctx) {
 		return
 	}
 	for _, token := range tokens {
-		doc += padding(token.Type, 10) + " | " + token.Key + "\n"
+		doc += padding(token.Type, 20) + " | " + token.Key + "\n"
 	}
 	ctx.Send(doc)
 }
@@ -496,11 +502,12 @@ func tokenItemCommand(ctx *zero.Ctx) {
 		}
 		index = waitCommand(ctx, time.Second*60, "请选择你要查看的凭证", cmd)
 		if index == -1 {
-			ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
 			return
 		}
 	}
-	ctx.Send(ctxext.FakeSenderForwardNode(ctx, message.Text(formatToken(tokens[index]))))
+	msg := make(message.Message, 1)
+	msg[0] = ctxext.FakeSenderForwardNode(ctx, message.Text(formatToken(tokens[index])))
+	ctx.Send(msg)
 }
 
 // 开启/切换预设
@@ -558,8 +565,10 @@ func insertRoleCommand(ctx *zero.Ctx) {
 	dbRole := repo.GetRole("", newRole.Key, newRole.Type)
 	if dbRole != nil {
 		// 等待用户下一步选择
-		if 1 > waitCommand(ctx, time.Second*60, "已存在相同的预设，是否覆盖？", []string{"否", "是"}) {
-			ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
+		if index := waitCommand(ctx, time.Second*60, "已存在相同的预设，是否覆盖？", []string{"否", "是"}); index < 1 {
+			if index == 0 {
+				ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
+			}
 			return
 		}
 		newRole.Id = dbRole.Id
@@ -593,7 +602,6 @@ func deleteRoleCommand(ctx *zero.Ctx) {
 		}
 		index = waitCommand(ctx, time.Second*60, "请选择你要删除的凭证", cmd)
 		if index == -1 {
-			ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
 			return
 		}
 	}
@@ -615,7 +623,7 @@ func rolesCommand(ctx *zero.Ctx) {
 		return
 	}
 	for _, token := range preset {
-		doc += padding(token.Type, 10) + " | " + token.Key + "\n"
+		doc += padding(token.Type, 20) + " | " + token.Key + "\n"
 	}
 	ctx.Send(doc)
 }
@@ -641,11 +649,13 @@ func roleItemCommand(ctx *zero.Ctx) {
 		}
 		index = waitCommand(ctx, time.Second*60, "请选择你要查看的预设", cmd)
 		if index == -1 {
-			ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
 			return
 		}
 	}
-	ctx.Send(ctxext.FakeSenderForwardNode(ctx, message.Text(formatRole(roles[index]))))
+
+	msg := make(message.Message, 1)
+	msg[0] = ctxext.FakeSenderForwardNode(ctx, message.Text(formatRole(roles[index])))
+	ctx.Send(msg)
 }
 
 func switchAICommand(ctx *zero.Ctx) {
@@ -684,7 +694,7 @@ func waitCommand(ctx *zero.Ctx, timeout time.Duration, tips string, cmd []string
 		cmdtips += "[" + strconv.Itoa(i) + "]: " + c + "\n"
 	}
 	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(tips+"\n发送序号:\n"+cmdtips+" \n发送\"取消\"终止执行"))
-	recv, cancel := zero.NewFutureEvent("message", 999, false, zero.RegexRule(`^(是|取消)$`), zero.CheckUser(ctx.Event.UserID)).Repeat()
+	recv, cancel := zero.NewFutureEvent("message", 999, false, zero.RegexRule(`^(取消|\d+)$`), zero.CheckUser(ctx.Event.UserID)).Repeat()
 	defer cancel()
 	for {
 		select {
@@ -698,7 +708,7 @@ func waitCommand(ctx *zero.Ctx, timeout time.Duration, tips string, cmd []string
 				return -1
 			}
 			index, err := strconv.Atoi(nextcmd)
-			if err != nil || index > len(cmd)-1 {
+			if err != nil || index < 0 || index > len(cmd)-1 {
 				ctx.SendChain(message.At(ctx.Event.UserID), message.Text("请输入正确的序号"))
 				continue
 			}

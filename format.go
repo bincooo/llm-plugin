@@ -17,7 +17,7 @@ Key = "[KEY]"
 Type = "[TYPE]"
 AppId = "[APP_ID]"
 Token = "[TOKEN]"
-MaxTokens = "[MAX_TOKENS]"
+MaxTokens = [MAX_TOKENS]
 BaseURL = "[BASE_URL]"
 `
 

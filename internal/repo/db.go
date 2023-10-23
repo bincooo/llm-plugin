@@ -18,30 +18,30 @@ type command struct {
 }
 
 type GlobalConfig struct {
-	Id    int
-	Proxy string // 代理
-	Bot   string // AI类型
-	Role  string // 默认预设
+	Id    int    `db:"id"`
+	Proxy string `db:"proxy"` // 代理
+	Bot   string `db:"bot"`   // AI类型
+	Role  string `db:"role"`  // 默认预设
 }
 
 type TokenConfig struct {
-	Id        string
-	Key       string
-	Type      string // 类型
-	AppId     string // Claude APPID
-	Token     string // 凭证
-	MaxTokens int    // openai-api 最大Tokens
-	BaseURL   string // 代理转发
+	Id        string `db:"id"`
+	Key       string `db:"key"`
+	Type      string `db:"type"`       // 类型
+	AppId     string `db:"app_id"`     // Claude APPID
+	Token     string `db:"token"`      // 凭证
+	BaseURL   string `db:"base_url"`   // 代理转发
+	MaxTokens int    `db:"max_tokens"` // openai-api 最大Tokens
 }
 
 type RoleConfig struct {
-	Id      string
-	Key     string
-	Type    string // 类型
-	Content string // 预设内容
-	Message string // 消息模版
-	Chain   string // 拦截处理器
-	Section int    // 是否分段输出
+	Id      string `db:"id"`
+	Key     string `db:"key"`
+	Type    string `db:"type"`    // 类型
+	Content string `db:"content"` // 预设内容
+	Message string `db:"message"` // 消息模版
+	Chain   string `db:"chain"`   // 拦截处理器
+	Section int    `db:"section"` // 是否分段输出
 }
 
 var (
@@ -142,7 +142,7 @@ func GetToken(id, key, t string) *TokenConfig {
 		w = "where" + strings.Join(where, "and")
 	}
 
-	err := cmd.sql.Find("token", &token, w)
+	err := cmd.sql.Find("tokens", &token, w)
 	if err != nil {
 		return nil
 	}
@@ -167,7 +167,7 @@ func FindTokens(key, t string) ([]*TokenConfig, error) {
 }
 
 func RemoveToken(id string) {
-	_ = cmd.sql.Del("token", "where id='"+id+"'")
+	_ = cmd.sql.Del("tokens", "where id='"+id+"'")
 }
 
 // 通过ID、key（名称）、t（ai类型）获取角色配置
