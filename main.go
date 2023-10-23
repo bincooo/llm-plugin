@@ -63,7 +63,7 @@ var (
 )
 
 // inc:0 自增 priority 0~9, set:0 设置priority
-func CustomPriority(matcher *control.Matcher, priority string) *control.Matcher {
+func customPriority(matcher *control.Matcher, priority string) *control.Matcher {
 	switch priority[:4] {
 	case "set:":
 		i, err := strconv.Atoi(priority[4:])
@@ -105,6 +105,11 @@ func init() {
 	if e := lmt.RegChain("online", &chain.OnlineInterceptor{}); e != nil {
 		panic(e)
 	}
+
+	zero.OnNotice(func(ctx *zero.Ctx) bool {
+		return ctx.Event.NoticeType == "group_recall" || ctx.Event.NoticeType == "friend_recall"
+	}, repo.OnceOnSuccess).SetBlock(false).Handle(recallMessageCommand)
+
 	engine.OnFullMatch("全局属性", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(globalCommand)
 	engine.OnRegex(`^修改全局属性\s+([\s\S]*)$`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
@@ -141,10 +146,7 @@ func init() {
 		Handle(closeTTSCommand)
 	engine.OnRegex(`[开启|切换]语音\s(.+)`, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTTSCommand)
-	CustomPriority(engine.OnNotice(func(ctx *zero.Ctx) bool {
-		return ctx.Event.NoticeType == "group_recall" || ctx.Event.NoticeType == "friend_recall"
-	}), "set:0").SetBlock(false).Handle(recallMessageCommand)
-	CustomPriority(engine.OnMessage(zero.OnlyToMe, repo.OnceOnSuccess), "inc:9").SetBlock(true).Limit(ctxext.LimitByUser).
+	customPriority(engine.OnMessage(zero.OnlyToMe, repo.OnceOnSuccess), "inc:9").SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
 }
 
