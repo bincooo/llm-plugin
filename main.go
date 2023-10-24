@@ -2,6 +2,8 @@ package llm
 
 import (
 	"github.com/BurntSushi/toml"
+	"github.com/FloatTech/floatbox/file"
+	"github.com/FloatTech/floatbox/web"
 	"github.com/FloatTech/zbputils/control"
 	"github.com/FloatTech/zbputils/ctxext"
 	"github.com/bincooo/llm-plugin/internal/chain"
@@ -89,6 +91,13 @@ func init() {
 	vars.E = engine
 
 	var err error
+	if !file.IsExist(vars.E.DataFolder() + "/load.gif") {
+		data, e := web.GetData("https://cdn.jsdelivr.net/gh/bincooo/llm-plugin@data-1/load.gif")
+		if e != nil {
+			panic(e)
+		}
+		_ = os.WriteFile(vars.E.DataFolder()+"/load.gif", data, 0666)
+	}
 	if vars.Loading, err = os.ReadFile(vars.E.DataFolder() + "/load.gif"); err != nil {
 		panic(err)
 	}
@@ -323,8 +332,6 @@ func conversationCommand(ctx *zero.Ctx) {
 	}
 
 	timer := util.NewGifTimer(ctx, section)
-	defer timer.Release()
-
 	cacheMessage := make([]string, 0)
 	lmtHandle := func(response adtypes.PartialResponse) {
 		if response.Status == advars.Begin {
@@ -346,6 +353,7 @@ func conversationCommand(ctx *zero.Ctx) {
 			logrus.Error(response.Error)
 			go util.HandleBingCaptcha(cctx.Token, response.Error)
 			ctx.SendChain(reply, message.Text(response.Error))
+			timer.Release()
 			return
 		}
 
@@ -376,6 +384,7 @@ func conversationCommand(ctx *zero.Ctx) {
 				}
 			}
 			logrus.Info("[MiaoX] - 结束应答")
+			timer.Release()
 		}
 	}
 
