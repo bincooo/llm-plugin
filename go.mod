@@ -8,9 +8,9 @@ require (
 	github.com/FloatTech/sqlite v1.6.3
 	github.com/FloatTech/zbpctrl v1.6.0
 	github.com/FloatTech/zbputils v1.7.0
-	github.com/bincooo/chatgpt-adapter v1.0.13-0.20231025104911-bcbc7697d4a2
+	github.com/bincooo/chatgpt-adapter v1.0.13-0.20231025122639-00227ffa6a59
 	github.com/bincooo/claude-api v1.0.3
-	github.com/bincooo/edge-api v1.0.2-0.20231025103340-758d11038522
+	github.com/bincooo/edge-api v1.0.2-0.20231025122248-bfd3f9702361
 	github.com/google/uuid v1.3.1
 	github.com/pp-group/edge-tts-go v1.1.2
 	github.com/sirupsen/logrus v1.9.3
