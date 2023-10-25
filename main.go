@@ -121,9 +121,9 @@ func init() {
 
 	engine.OnFullMatch("全局属性", zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(globalCommand)
-	engine.OnRegex(`^修改全局属性\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^[添加|修改]全局属性\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(editGlobalCommand)
-	engine.OnRegex(`^添加凭证\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^[添加|修改]凭证\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(insertTokenCommand)
 	engine.OnRegex(`^删除凭证\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(deleteTokenCommand)
@@ -137,7 +137,7 @@ func init() {
 		Handle(aiCommand)
 	engine.OnRegex(`切换AI\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchAICommand)
-	engine.OnRegex(`^添加预设\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`^[添加|修改]预设\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(insertRoleCommand)
 	engine.OnRegex(`^删除预设\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(deleteRoleCommand)
