@@ -120,12 +120,13 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 
 	logrus.Infoln("[MiaoX] - 代理地址： ", g.Proxy)
 	cctx := autotypes.ConversationContext{
-		Id:        key,
-		Bot:       bot,
-		MaxTokens: maxTokens,
-		Chain:     BaseChain,
-		Model:     model,
-		Proxy:     g.Proxy,
+		Id:          key,
+		Bot:         bot,
+		MaxTokens:   maxTokens,
+		Chain:       BaseChain,
+		Model:       model,
+		Proxy:       g.Proxy,
+		Temperature: .8,
 	}
 
 	if bot == vars.OpenAIAPI {
