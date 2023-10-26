@@ -7,32 +7,32 @@ import (
 )
 
 const gTpl = `
-Bot = "[BOT]"
-Role = "[ROLE]"
-Proxy = "[PROXY]"
+bot = "[BOT]"
+role = "[ROLE]"
+proxy = "[PROXY]"
 `
 
 const tokenTpl = `
-Key = "[KEY]"
-Type = "[TYPE]"
-AppId = "[APP_ID]"
-Token = "[TOKEN]"
-MaxTokens = [MAX_TOKENS]
-BaseURL = "[BASE_URL]"
-Images = [IMAGES]
+key = "[KEY]"
+type = "[TYPE]"
+appId = "[APP_ID]"
+token = "[TOKEN]"
+maxTokens = [MAX_TOKENS]
+baseURL = "[BASE_URL]"
+images = [IMAGES]
 `
 
 const roleTpl = `
-Key = "[KEY]"
-Type = "[TYPE]"
-Chain = "[CHAIN]"
-Section = [SECTION]
+key = "[KEY]"
+type = "[TYPE]"
+chain = "[CHAIN]"
+section = [SECTION]
 
-Content = """
+content = """
 [CONTENT]
 """
 
-Message = """"
+message = """"
 [MESSAGE]
 """
 `

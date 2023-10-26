@@ -481,7 +481,7 @@ func switchTokensCommand(ctx *zero.Ctx) {
 	}
 
 	if bot != token.Type {
-		ctx.Send("当前AI类型无法使用`" + key + "#" + bot + "`凭证")
+		ctx.Send("当前AI(" + bot + ")无法使用`" + key + "`凭证")
 		return
 	}
 
@@ -495,7 +495,7 @@ func switchTokensCommand(ctx *zero.Ctx) {
 	lmt.Remove(cctx.Id, bot)
 	store.DeleteOnline(cctx.Id)
 	updateConversationContext(cctx)
-	ctx.Send("已切换`" + key + "#" + bot + "`凭证")
+	ctx.Send("已切换`" + key + "`凭证")
 }
 
 // 凭证列表
