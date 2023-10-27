@@ -80,7 +80,6 @@ func customPriority(matcher *nano.Matcher, priority string) *nano.Matcher {
 			panic(err)
 		}
 		_unsafe_priv_func(matcher, i)
-		nano.StoreMatcher(matcher)
 		return matcher
 	case "inc:":
 		i, err := strconv.Atoi(priority[4:])
@@ -95,7 +94,6 @@ func customPriority(matcher *nano.Matcher, priority string) *nano.Matcher {
 			prio = *p
 		}
 		_unsafe_priv_func(matcher, prio+i)
-		nano.StoreMatcher(matcher)
 		return matcher
 	default:
 		panic("未知的优先级指令")
@@ -134,31 +132,31 @@ func init() {
 
 	engine.OnMessageFullMatch("全局属性", nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(globalCommand)
-	engine.OnMessageRegex(`^[添加|修改]全局属性\s+([\s\S]*)$`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageRegex(`[添加|修改]全局属性\s?([\s\S]*)$`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(editGlobalCommand)
-	engine.OnMessageRegex(`^[添加|修改]凭证\s+([\s\S]*)$`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageRegex(`[添加|修改]凭证\s?([\s\S]*)$`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(insertTokenCommand)
-	engine.OnMessageRegex(`^删除凭证\s+(\S+)`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageRegex(`删除凭证\s?(\S+)`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(deleteTokenCommand)
 	engine.OnMessageFullMatch("凭证列表", nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(tokensCommand)
-	engine.OnMessageRegex(`^凭证明细\s+(\S+)`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageRegex(`凭证明细\s?(\S+)`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(tokenItemCommand)
-	engine.OnMessageRegex(`^切换凭证\s+(\S+)`, nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessageRegex(`切换凭证\s?(\S+)`, nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTokensCommand)
 	engine.OnMessageFullMatch("AI列表", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(aiCommand)
-	engine.OnMessageRegex(`切换AI\s+(\S+)`, nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessageRegex(`切换AI\s?(\S+)`, nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchAICommand)
-	engine.OnMessageRegex(`^[添加|修改]预设\s+([\s\S]*)$`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageRegex(`[添加|修改]预设\s?([\s\S]*)$`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(insertRoleCommand)
-	engine.OnMessageRegex(`^删除预设\s+(\S+)`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageRegex(`删除预设\s?(\S+)`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(deleteRoleCommand)
 	engine.OnMessageFullMatch("预设列表", nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(rolesCommand)
-	engine.OnMessageRegex(`^预设明细\s+(\S+)`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageRegex(`预设明细\s?(\S+)`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(roleItemCommand)
-	engine.OnMessageRegex(`[开启|切换]预设\s(\S+)`, nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessageRegex(`[开启|切换]预设\s?(\S+)`, nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchRoleCommand)
 	engine.OnMessageFullMatch("历史对话", nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(historyCommand)
@@ -166,7 +164,7 @@ func init() {
 		Handle(ttsCommand)
 	engine.OnMessageFullMatch("关闭语音", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(closeTTSCommand)
-	engine.OnMessageRegex(`[开启|切换]语音\s(.+)`, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessageRegex(`[开启|切换]语音\s?(.+)`, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTTSCommand)
 	customPriority(engine.OnMessage(nano.OnlyToMe, repo.OnceOnSuccess), "inc:9").SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
