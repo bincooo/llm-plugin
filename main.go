@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
 	ctrl "github.com/FloatTech/zbpctrl"
 	adapter "github.com/bincooo/chatgpt-adapter"
@@ -27,6 +28,8 @@ import (
 	adtypes "github.com/bincooo/chatgpt-adapter/types"
 	advars "github.com/bincooo/chatgpt-adapter/vars"
 	claudevars "github.com/bincooo/claude-api/vars"
+
+	_ "unsafe"
 )
 
 const help = `- @Bot + 文本内容
@@ -43,6 +46,7 @@ const help = `- @Bot + 文本内容
 `
 
 var (
+	prio   = -1
 	engine = nano.Register("miaox", &ctrl.Options[*nano.Ctx]{
 		Help:              help,
 		Brief:             "喵小爱-AI适配器",
@@ -63,6 +67,40 @@ var (
 		"要不你自己读读看拟写了什么 (╯‵□′)╯︵┻━┻",
 	}
 )
+
+//go:linkname _unsafe_priv_func github.com/fumiama/NanoBot.(*Matcher).setPriority
+func _unsafe_priv_func(p *nano.Matcher, i int)
+
+// inc:0 自增 priority 0~9, set:0 设置priority
+func customPriority(matcher *nano.Matcher, priority string) *nano.Matcher {
+	switch priority[:4] {
+	case "set:":
+		i, err := strconv.Atoi(priority[4:])
+		if err != nil {
+			panic(err)
+		}
+		_unsafe_priv_func(matcher, i)
+		nano.StoreMatcher(matcher)
+		return matcher
+	case "inc:":
+		i, err := strconv.Atoi(priority[4:])
+		if err != nil {
+			panic(err)
+		}
+		if i < 0 || i >= 10 {
+			panic("优先级增量范围0～9，实际为: " + strconv.Itoa(i))
+		}
+		if prio == -1 {
+			p := (*int)(unsafe.Pointer(uintptr(unsafe.Pointer(matcher)) + 3))
+			prio = *p
+		}
+		_unsafe_priv_func(matcher, prio+i)
+		nano.StoreMatcher(matcher)
+		return matcher
+	default:
+		panic("未知的优先级指令")
+	}
+}
 
 func init() {
 	vars.E = engine
@@ -130,7 +168,7 @@ func init() {
 		Handle(closeTTSCommand)
 	engine.OnMessageRegex(`[开启|切换]语音\s(.+)`, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTTSCommand)
-	engine.OnMessage(nano.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	customPriority(engine.OnMessage(nano.OnlyToMe, repo.OnceOnSuccess), "inc:9").SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
 }
 
