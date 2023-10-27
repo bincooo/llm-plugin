@@ -37,7 +37,7 @@
 
 ### 1.变量使用：
 
-```json
+```
 {
     "args": {
         "Current": "[QQ]",
@@ -110,12 +110,12 @@ bot   string // AI类型
 role  string // 默认预设
 ```
 例子：
-``
+```
 添加全局属性
 bot = "openai-api"
 role = "喵小爱"
 proxy = "http:127.0.0.1:7890"
-``
+```
 
 
 
@@ -171,7 +171,7 @@ baseURL   string // 代理转发
 maxTokens int    // openai-api 最大Tokens
 ```
 例子：
-``
+```
 添加凭证
 key = "fastgpt-bing"
 type = "openai-api"
@@ -179,7 +179,7 @@ appId = ""
 token = "fastgpt-xxxx"
 maxTokens = 12000
 baseURL = "http://xxxxx:8080/api/v1"
-``
+```
 
 在`ZeroBot-Plugin`的`main.go`中导入包
 
