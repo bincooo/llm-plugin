@@ -3,10 +3,9 @@ package llm
 import (
 	"encoding/json"
 	"github.com/BurntSushi/toml"
+	"github.com/FloatTech/NanoBot-Plugin/utils/ctxext"
 	"github.com/FloatTech/floatbox/file"
 	"github.com/FloatTech/floatbox/web"
-	"github.com/FloatTech/zbputils/control"
-	"github.com/FloatTech/zbputils/ctxext"
 	"github.com/bincooo/go-openai"
 	"github.com/bincooo/llm-plugin/internal/chain"
 	"github.com/bincooo/llm-plugin/internal/repo"
@@ -14,8 +13,8 @@ import (
 	"github.com/bincooo/llm-plugin/internal/types"
 	"github.com/bincooo/llm-plugin/internal/util"
 	"github.com/bincooo/llm-plugin/internal/vars"
+	nano "github.com/fumiama/NanoBot"
 	"github.com/sirupsen/logrus"
-	"github.com/wdvxdr1123/ZeroBot/message"
 	"math/rand"
 	"os"
 	"strconv"
@@ -28,7 +27,6 @@ import (
 	adtypes "github.com/bincooo/chatgpt-adapter/types"
 	advars "github.com/bincooo/chatgpt-adapter/vars"
 	claudevars "github.com/bincooo/claude-api/vars"
-	zero "github.com/wdvxdr1123/ZeroBot"
 )
 
 const help = `- @Bot + 文本内容
@@ -45,7 +43,7 @@ const help = `- @Bot + 文本内容
 `
 
 var (
-	engine = control.Register("miaox", &ctrl.Options[*zero.Ctx]{
+	engine = nano.Register("miaox", &ctrl.Options[*nano.Ctx]{
 		Help:              help,
 		Brief:             "喵小爱-AI适配器",
 		DisableOnDefault:  false,
@@ -65,29 +63,6 @@ var (
 		"要不你自己读读看拟写了什么 (╯‵□′)╯︵┻━┻",
 	}
 )
-
-// inc:0 自增 priority 0~9, set:0 设置priority
-func customPriority(matcher *control.Matcher, priority string) *control.Matcher {
-	switch priority[:4] {
-	case "set:":
-		i, err := strconv.Atoi(priority[4:])
-		if err != nil {
-			panic(err)
-		}
-		return (*control.Matcher)((*zero.Matcher)(matcher).SetPriority(i))
-	case "inc:":
-		i, err := strconv.Atoi(priority[4:])
-		if err != nil {
-			panic(err)
-		}
-		if i < 0 || i >= 10 {
-			panic("优先级增量范围0～9，实际为: " + strconv.Itoa(i))
-		}
-		return (*control.Matcher)((*zero.Matcher)(matcher).SetPriority(matcher.Priority + i))
-	default:
-		panic("未知的优先级指令")
-	}
-}
 
 func init() {
 	vars.E = engine
@@ -117,60 +92,57 @@ func init() {
 		panic(e)
 	}
 
-	zero.OnNotice(func(ctx *zero.Ctx) bool {
-		return ctx.Event.NoticeType == "group_recall" || ctx.Event.NoticeType == "friend_recall"
-	}, repo.OnceOnSuccess).SetBlock(false).Handle(recallMessageCommand)
+	nano.OnMessageDelete(repo.OnceOnSuccess).SetBlock(false).Handle(recallMessageCommand)
 
-	engine.OnFullMatch("全局属性", zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageFullMatch("全局属性", nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(globalCommand)
-	engine.OnRegex(`^[添加|修改]全局属性\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageRegex(`^[添加|修改]全局属性\s+([\s\S]*)$`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(editGlobalCommand)
-	engine.OnRegex(`^[添加|修改]凭证\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageRegex(`^[添加|修改]凭证\s+([\s\S]*)$`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(insertTokenCommand)
-	engine.OnRegex(`^删除凭证\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageRegex(`^删除凭证\s+(\S+)`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(deleteTokenCommand)
-	engine.OnFullMatch("凭证列表", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageFullMatch("凭证列表", nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(tokensCommand)
-	engine.OnRegex(`^凭证明细\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageRegex(`^凭证明细\s+(\S+)`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(tokenItemCommand)
-	engine.OnRegex(`^切换凭证\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessageRegex(`^切换凭证\s+(\S+)`, nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTokensCommand)
-	engine.OnFullMatch("AI列表", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessageFullMatch("AI列表", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(aiCommand)
-	engine.OnRegex(`切换AI\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessageRegex(`切换AI\s+(\S+)`, nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchAICommand)
-	engine.OnRegex(`^[添加|修改]预设\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageRegex(`^[添加|修改]预设\s+([\s\S]*)$`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(insertRoleCommand)
-	engine.OnRegex(`^删除预设\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageRegex(`^删除预设\s+(\S+)`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(deleteRoleCommand)
-	engine.OnFullMatch("预设列表", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessageFullMatch("预设列表", nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(rolesCommand)
-	engine.OnRegex(`^预设明细\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnMessageRegex(`^预设明细\s+(\S+)`, nano.AdminPermission, nano.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(roleItemCommand)
-	engine.OnRegex(`[开启|切换]预设\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessageRegex(`[开启|切换]预设\s(\S+)`, nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchRoleCommand)
-	engine.OnFullMatch("历史对话", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessageFullMatch("历史对话", nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(historyCommand)
-	engine.OnFullMatch("语音列表", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessageFullMatch("语音列表", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(ttsCommand)
-	engine.OnFullMatch("关闭语音", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessageFullMatch("关闭语音", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(closeTTSCommand)
-	engine.OnRegex(`[开启|切换]语音\s(.+)`, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessageRegex(`[开启|切换]语音\s(.+)`, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTTSCommand)
-	customPriority(engine.OnMessage(zero.OnlyToMe, repo.OnceOnSuccess), "inc:9").SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessage(nano.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
 }
 
-func globalCommand(ctx *zero.Ctx) {
+func globalCommand(ctx *nano.Ctx) {
 	g := repo.GetGlobal()
-
-	msg := make(message.Message, 1)
-	msg[0] = ctxext.FakeSenderForwardNode(ctx, message.Text(formatGlobal(g)))
-	ctx.Send(msg)
+	if _, err := ctx.SendPlainMessage(false, formatGlobal(g)); err != nil {
+		logrus.Error(err)
+	}
 }
 
 // 修改全局属性
-func editGlobalCommand(ctx *zero.Ctx) {
+func editGlobalCommand(ctx *nano.Ctx) {
 	value := ctx.State["regex_matched"].([]string)[1]
 	value = strings.ReplaceAll(value, "&#91;", "[")
 	value = strings.ReplaceAll(value, "&#93;", "]")
@@ -178,12 +150,16 @@ func editGlobalCommand(ctx *zero.Ctx) {
 	var g repo.GlobalConfig
 	if _, err := toml.Decode(value, &g); err != nil {
 		logrus.Error(err)
-		ctx.Send("添加失败，请按格式填写：" + err.Error())
+		if _, err = ctx.SendPlainMessage(false, "添加失败，请按格式填写："+err.Error()); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
 	if !validateBot(g.Bot) {
-		ctx.Send("修改失败，AI类型不正确。可使用：[AI列表] 命令查看")
+		if _, err := ctx.SendPlainMessage(false, "修改失败，AI类型不正确。可使用：[AI列表] 命令查看"); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
@@ -192,7 +168,9 @@ func editGlobalCommand(ctx *zero.Ctx) {
 		// 等待用户下一步选择
 		if index := waitCommand(ctx, time.Second*60, "已存在相同的全局属性，是否覆盖？", []string{"否", "是"}); index < 1 {
 			if index == 0 {
-				ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
+				if _, err := ctx.SendPlainMessage(true, "已取消"); err != nil {
+					logrus.Error(err)
+				}
 			}
 			return
 		}
@@ -200,13 +178,17 @@ func editGlobalCommand(ctx *zero.Ctx) {
 	}
 
 	if err := repo.EditGlobal(g); err != nil {
-		ctx.Send("修改失败: " + err.Error())
+		if _, err = ctx.SendPlainMessage(false, "修改失败: "+err.Error()); err != nil {
+			logrus.Error(err)
+		}
 	} else {
-		ctx.Send("修改成功")
+		if _, err = ctx.SendPlainMessage(false, "修改成功"); err != nil {
+			logrus.Error(err)
+		}
 	}
 }
 
-func aiCommand(ctx *zero.Ctx) {
+func aiCommand(ctx *nano.Ctx) {
 	slice := map[string][]string{
 		"openai": {
 			"- openai-api (api接口)",
@@ -227,88 +209,102 @@ func aiCommand(ctx *zero.Ctx) {
 	for k, v := range slice {
 		tex += "** " + k + " **\n" + strings.Join(v, "\n") + "\n\n"
 	}
-	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(tex))
+	if _, err := ctx.SendPlainMessage(false, nano.Text(tex)); err != nil {
+		logrus.Error(err)
+	}
 }
 
-func historyCommand(ctx *zero.Ctx) {
+func historyCommand(ctx *nano.Ctx) {
 	key := getId(ctx)
 	logrus.Info(adstore.GetMessages(key))
-	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已在后台打印"))
+	if _, err := ctx.SendPlainMessage(false, nano.Text("已在后台打印")); err != nil {
+		logrus.Error(err)
+	}
 }
 
 // 语音列表
-func ttsCommand(ctx *zero.Ctx) {
-	ctx.SendChain(message.Text(tts.Echo()))
+func ttsCommand(ctx *nano.Ctx) {
+	if _, err := ctx.SendPlainMessage(false, tts.Echo()); err != nil {
+		logrus.Error(err)
+	}
 }
 
 // 关闭语音
-func closeTTSCommand(ctx *zero.Ctx) {
+func closeTTSCommand(ctx *nano.Ctx) {
 	cctx, err := createConversationContext(ctx, "")
 	if err != nil {
-		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("发生异常: "+err.Error()))
+		if _, err = ctx.SendPlainMessage(false, nano.Text("发生异常: "+err.Error())); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 	args := cctx.Data.(types.ConversationContextArgs)
 	args.Tts = ""
 	cctx.Data = args
 	updateConversationContext(cctx)
-	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("关闭完毕"))
+	if _, err = ctx.SendPlainMessage(false, nano.Text("关闭完毕")); err != nil {
+		logrus.Error(err)
+	}
 }
 
 // 开启语音
-func switchTTSCommand(ctx *zero.Ctx) {
+func switchTTSCommand(ctx *nano.Ctx) {
 	matched := ctx.State["regex_matched"].([]string)[1]
 	index := strings.Index(matched, " ")
 	if index <= 0 || len(matched)-1 == index {
-		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("参数不正确: "+matched))
+		if _, err := ctx.SendPlainMessage(false, nano.Text("参数不正确: "+matched)); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
 	key := strings.TrimSpace(matched[:index])
 	value := strings.TrimSpace(matched[index:])
 	if !tts.ContainTone(key, value) {
-		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("不支持的语音类型: "+key+"/"+value))
+		if _, err := ctx.SendPlainMessage(false, nano.Text("不支持的语音类型: "+key+"/"+value)); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
 	cctx, err := createConversationContext(ctx, "")
 	if err != nil {
-		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("发生异常: "+err.Error()))
+		if _, err = ctx.SendPlainMessage(false, nano.Text("发生异常: "+err.Error())); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 	args := cctx.Data.(types.ConversationContextArgs)
 	args.Tts = key + "/" + value
 	cctx.Data = args
 	updateConversationContext(cctx)
-	ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("开启完毕"))
+	if _, err = ctx.SendPlainMessage(false, nano.Text("开启完毕")); err != nil {
+		logrus.Error(err)
+	}
 }
 
 // 撤回消息时删除缓存中的消息记录
-func recallMessageCommand(ctx *zero.Ctx) {
-	// 懒得写switch
-	reply := message.Reply(ctx.Event.MessageID)
-	messageId := reply.Data["id"]
-	adstore.DeleteMessageFor(getId(ctx), messageId)
+func recallMessageCommand(ctx *nano.Ctx) {
+	delmsg := ctx.Value.(*nano.MessageDelete)
+	adstore.DeleteMessageFor(getId(ctx), delmsg.Message.ID)
 }
 
 // 聊天
-func conversationCommand(ctx *zero.Ctx) {
-	name := ctx.Event.Sender.NickName
-	if strings.Contains(name, "Q群管家") {
-		return
-	}
-
-	reply := message.Reply(ctx.Event.MessageID)
+func conversationCommand(ctx *nano.Ctx) {
 	cctx, err := createConversationContext(ctx, "")
 	if err != nil {
-		ctx.SendChain(reply, message.Text(err))
 		logrus.Error(err)
+		if _, err = ctx.SendPlainMessage(true, nano.Text(err)); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
 	args := cctx.Data.(types.ConversationContextArgs)
-	args.Current = strconv.FormatInt(ctx.Event.Sender.ID, 10)
-	args.Nickname = ctx.Event.Sender.NickName
+	args.Nickname = ctx.Message.Member.Nick
+	if ctx.Message.Member.User != nil {
+		args.Current = ctx.Message.Member.User.ID
+	}
 	cctx.Data = args
 
 	images := false
@@ -317,11 +313,13 @@ func conversationCommand(ctx *zero.Ctx) {
 	}
 
 	prompt := parseMessage(ctx, images)
-	messageId := reply.Data["id"]
+	messageId := ctx.Message.ID
 
 	// 限制对话长度
 	if len([]rune(prompt)) > 300 {
-		ctx.SendChain(reply, message.Text(BB[rand.Intn(len(BB))]))
+		if _, err = ctx.SendPlainMessage(true, nano.Text(BB[rand.Intn(len(BB))])); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
@@ -333,18 +331,20 @@ func conversationCommand(ctx *zero.Ctx) {
 		section = role.Section == 1
 	}
 
-	timer := util.NewGifTimer(ctx, section)
+	// timer := util.NewGifTimer(ctx, section)
 	cacheMessage := make([]string, 0)
 	lmtHandle := func(response adtypes.PartialResponse) {
-		if response.Status == advars.Begin {
-			timer.Refill()
-		}
+		//if response.Status == advars.Begin {
+		//	timer.Refill()
+		//}
 
 		if len(strings.TrimSpace(response.Message)) > 0 {
-			if section && args.Tts == "" {
+			if section /* && args.Tts == "" */ {
 				segment := util.StringToMessageSegment(cctx.Id, response.Message)
-				ctx.SendChain(append(segment, reply)...)
-				timer.Refill()
+				if _, err = ctx.SendChain(append(segment, nano.ReplyTo(ctx.Message.ID))...); err != nil {
+					logrus.Error(err)
+				}
+				// timer.Refill()
 			} else {
 				// 开启语音就不要用分段响应了
 				cacheMessage = append(cacheMessage, response.Message)
@@ -354,49 +354,60 @@ func conversationCommand(ctx *zero.Ctx) {
 		if response.Error != nil {
 			logrus.Error(response.Error)
 			go util.HandleBingCaptcha(cctx.Token, response.Error)
-			ctx.SendChain(reply, message.Text(response.Error))
-			timer.Release()
+			if _, err = ctx.SendPlainMessage(true, nano.Text(response.Error)); err != nil {
+				logrus.Error(err)
+			}
+			// timer.Release()
 			return
 		}
 
 		if response.Status == advars.Closed {
 			// 开启了语音
-			if args.Tts != "" {
-				slice := strings.Split(args.Tts, "/")
+			//if args.Tts != "" {
+			//	slice := strings.Split(args.Tts, "/")
+			//	msg := strings.TrimSpace(strings.Join(cacheMessage, ""))
+			//	if msg != "" {
+			//		segment := util.StringToMessageSegment(cctx.Id, msg)
+			//		if _, err = ctx.SendChain(append(segment, nano.ReplyTo(ctx.Message.ID))...); err != nil {
+			//			logrus.Error(err)
+			//		}
+			//		audios, e := tts.Audio(slice[0], slice[1], msg)
+			//		if e != nil {
+			//			logrus.Error("生成语音失败：", e)
+			//			if _, err = ctx.SendPlainMessage(true, e); err != nil {
+			//				logrus.Error(err)
+			//			}
+			//		} else {
+			//			for _, audio := range audios {
+			//				time.Sleep(600 * time.Millisecond)
+			//				ctx.SendChain(nano.Audio(audio))
+			//			}
+			//		}
+			//	}
+			//} else
+			if !section { // 关闭了分段输出
 				msg := strings.TrimSpace(strings.Join(cacheMessage, ""))
 				if msg != "" {
 					segment := util.StringToMessageSegment(cctx.Id, msg)
-					audios, e := tts.Audio(slice[0], slice[1], msg)
-					ctx.SendChain(append(segment, reply)...)
-					if e != nil {
-						ctx.SendChain(reply, message.Text(e))
-						logrus.Error("生成语音失败：", e)
-					} else {
-						for _, audio := range audios {
-							time.Sleep(600 * time.Millisecond)
-							ctx.SendChain(message.Record(audio))
-						}
+					if _, err = ctx.SendChain(append(segment, nano.ReplyTo(ctx.Message.ID))...); err != nil {
+						logrus.Error(err)
 					}
-				}
-			} else if !section { // 关闭了分段输出
-				msg := strings.TrimSpace(strings.Join(cacheMessage, ""))
-				if msg != "" {
-					segment := util.StringToMessageSegment(cctx.Id, msg)
-					ctx.SendChain(append(segment, message.Reply(ctx.Event.MessageID))...)
 				}
 			}
 			logrus.Info("[MiaoX] - 结束应答")
-			timer.Release()
+			// timer.Release()
 		}
 	}
 
 	if e := lmt.Join(cctx, lmtHandle); e != nil {
-		ctx.SendChain(reply, message.Text(e))
+		if _, err = ctx.SendPlainMessage(true, e); err != nil {
+			logrus.Error(err)
+		}
 	}
 }
 
 // 添加凭证
-func insertTokenCommand(ctx *zero.Ctx) {
+func insertTokenCommand(ctx *nano.Ctx) {
 	value := ctx.State["regex_matched"].([]string)[1]
 	value = strings.ReplaceAll(value, "&#91;", "[")
 	value = strings.ReplaceAll(value, "&#93;", "]")
@@ -404,12 +415,16 @@ func insertTokenCommand(ctx *zero.Ctx) {
 	var newToken repo.TokenConfig
 	if _, err := toml.Decode(value, &newToken); err != nil {
 		logrus.Error(err)
-		ctx.Send("添加失败，请按格式填写：" + err.Error())
+		if _, err = ctx.SendPlainMessage(false, "添加失败，请按格式填写："+err.Error()); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
 	if !validateBot(newToken.Type) {
-		ctx.Send("修改失败，AI类型不正确。可使用：[AI列表] 命令查看")
+		if _, err := ctx.SendPlainMessage(false, "修改失败，AI类型不正确。可使用：[AI列表] 命令查看"); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
@@ -419,7 +434,9 @@ func insertTokenCommand(ctx *zero.Ctx) {
 		time.Sleep(3 * time.Second)
 		if index := waitCommand(ctx, time.Second*60, "已存在相同的凭证，是否覆盖？", []string{"否", "是"}); index < 1 {
 			if index == 0 {
-				ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
+				if _, err := ctx.SendPlainMessage(true, "已取消"); err != nil {
+					logrus.Error(err)
+				}
 			}
 			return
 		}
@@ -427,22 +444,30 @@ func insertTokenCommand(ctx *zero.Ctx) {
 	}
 
 	if err := repo.EditToken(newToken); err != nil {
-		ctx.Send("添加失败: " + err.Error())
+		if _, err = ctx.SendPlainMessage(false, "添加失败: "+err.Error()); err != nil {
+			logrus.Error(err)
+		}
 	} else {
-		ctx.Send("添加成功")
+		if _, err = ctx.SendPlainMessage(false, "添加成功"); err != nil {
+			logrus.Error(err)
+		}
 	}
 }
 
 // 删除凭证
-func deleteTokenCommand(ctx *zero.Ctx) {
+func deleteTokenCommand(ctx *nano.Ctx) {
 	key := ctx.State["regex_matched"].([]string)[1]
 	tokens, err := repo.FindTokens(key, "")
 	if err != nil {
-		ctx.Send("删除失败: " + err.Error())
+		if _, err = ctx.SendPlainMessage(false, "删除失败: "+err.Error()); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 	if len(tokens) == 0 {
-		ctx.Send("`" + key + "`不存在")
+		if _, err = ctx.SendPlainMessage(false, "`"+key+"`不存在"); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
@@ -459,15 +484,20 @@ func deleteTokenCommand(ctx *zero.Ctx) {
 	}
 
 	repo.RemoveToken(tokens[index].Id)
-	ctx.Send("`" + key + "#" + tokens[0].Type + "`已删除")
+	if _, err = ctx.SendPlainMessage(false, "`"+key+"#"+tokens[0].Type+"`已删除"); err != nil {
+		logrus.Error(err)
+	}
 }
 
 // 切换AI凭证
-func switchTokensCommand(ctx *zero.Ctx) {
+func switchTokensCommand(ctx *nano.Ctx) {
 	key := ctx.State["regex_matched"].([]string)[1]
 	cctx, err := createConversationContext(ctx, "")
 	if err != nil {
-		ctx.Send("获取上下文出错: " + err.Error())
+		logrus.Error(err)
+		if _, err = ctx.SendPlainMessage(false, "获取上下文出错: "+err.Error()); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
@@ -478,12 +508,16 @@ func switchTokensCommand(ctx *zero.Ctx) {
 
 	token := repo.GetToken("", key, bot)
 	if token == nil {
-		ctx.Send("`" + cctx.Bot + "`的`" + key + "`凭证不存在")
+		if _, err = ctx.SendPlainMessage(false, "`"+cctx.Bot+"`的`"+key+"`凭证不存在"); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
 	if bot != token.Type {
-		ctx.Send("当前AI(" + bot + ")无法使用`" + key + "`凭证")
+		if _, err = ctx.SendPlainMessage(false, "当前AI("+bot+")无法使用`"+key+"`凭证"); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
@@ -497,37 +531,51 @@ func switchTokensCommand(ctx *zero.Ctx) {
 	lmt.Remove(cctx.Id, bot)
 	store.DeleteOnline(cctx.Id)
 	updateConversationContext(cctx)
-	ctx.Send("已切换`" + key + "`凭证")
+	if _, err = ctx.SendPlainMessage(false, "已切换`"+key+"`凭证"); err != nil {
+		logrus.Error(err)
+	}
 }
 
 // 凭证列表
-func tokensCommand(ctx *zero.Ctx) {
+func tokensCommand(ctx *nano.Ctx) {
 	doc := "凭证列表：(bot|key)\n\n"
 	tokens, err := repo.FindTokens("", "")
 	if err != nil {
-		ctx.Send(doc + "None.")
+		logrus.Error(err)
+		if _, err = ctx.SendPlainMessage(false, doc+"None."); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 	if len(tokens) <= 0 {
-		ctx.Send(doc + "None.")
+		if _, err = ctx.SendPlainMessage(false, doc+"None."); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 	for _, token := range tokens {
 		doc += padding(token.Type, 20) + " | " + token.Key + "\n"
 	}
-	ctx.Send(doc)
+	if _, err = ctx.SendPlainMessage(false, doc); err != nil {
+		logrus.Error(err)
+	}
 }
 
 // 凭证明细
-func tokenItemCommand(ctx *zero.Ctx) {
+func tokenItemCommand(ctx *nano.Ctx) {
 	key := ctx.State["regex_matched"].([]string)[1]
 	tokens, err := repo.FindTokens(key, "")
 	if err != nil {
-		ctx.Send("查询失败: " + err.Error())
+		logrus.Error(err)
+		if _, err = ctx.SendPlainMessage(false, "查询失败: "+err.Error()); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 	if len(tokens) == 0 {
-		ctx.Send("`" + key + "`不存在")
+		if _, err = ctx.SendPlainMessage(false, "`"+key+"`不存在"); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
@@ -542,18 +590,20 @@ func tokenItemCommand(ctx *zero.Ctx) {
 			return
 		}
 	}
-	msg := make(message.Message, 1)
-	msg[0] = ctxext.FakeSenderForwardNode(ctx, message.Text(formatToken(tokens[index])))
-	ctx.Send(msg)
+	if _, err = ctx.SendPlainMessage(false, formatToken(tokens[index])); err != nil {
+		logrus.Error(err)
+	}
 }
 
 // 开启/切换预设
-func switchRoleCommand(ctx *zero.Ctx) {
+func switchRoleCommand(ctx *nano.Ctx) {
 	value := ctx.State["regex_matched"].([]string)[1]
 
 	cctx, err := createConversationContext(ctx, "")
 	if err != nil {
-		ctx.Send("获取上下文出错: " + err.Error())
+		if _, err = ctx.SendPlainMessage(false, "获取上下文出错: "+err.Error()); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
@@ -565,12 +615,16 @@ func switchRoleCommand(ctx *zero.Ctx) {
 
 	role := repo.GetRole("", value, t)
 	if role == nil {
-		ctx.Send("`" + value + "`预设不存在")
+		if _, err = ctx.SendPlainMessage(false, "`"+value+"`预设不存在"); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
 	if t != role.Type {
-		ctx.Send("当前AI类型无法使用`" + value + "`预设")
+		if _, err = ctx.SendPlainMessage(false, "当前AI类型无法使用`"+value+"`预设"); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
@@ -586,11 +640,13 @@ func switchRoleCommand(ctx *zero.Ctx) {
 	lmt.Remove(cctx.Id, bot)
 	store.DeleteOnline(cctx.Id)
 	updateConversationContext(cctx)
-	ctx.Send("已切换`" + value + "`预设")
+	if _, err = ctx.SendPlainMessage(false, "已切换`"+value+"`预设"); err != nil {
+		logrus.Error(err)
+	}
 }
 
 // 添加预设
-func insertRoleCommand(ctx *zero.Ctx) {
+func insertRoleCommand(ctx *nano.Ctx) {
 	value := ctx.State["regex_matched"].([]string)[1]
 	value = strings.ReplaceAll(value, "&#91;", "[")
 	value = strings.ReplaceAll(value, "&#93;", "]")
@@ -600,7 +656,9 @@ func insertRoleCommand(ctx *zero.Ctx) {
 	var newRole repo.RoleConfig
 	if _, err := toml.Decode(value, &newRole); err != nil {
 		logrus.Error(err)
-		ctx.Send("添加失败，请按格式填写：" + err.Error())
+		if _, err = ctx.SendPlainMessage(false, "添加失败，请按格式填写："+err.Error()); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
@@ -610,12 +668,14 @@ func insertRoleCommand(ctx *zero.Ctx) {
 	}
 
 	if !validateType(newRole.Type) {
-		ctx.Send("修改失败，AI类型不正确。请选择以下类型：\n - " +
-			advars.OpenAIAPI + "\n - " +
-			advars.OpenAIWeb + "\n - " +
-			advars.Claude + "\n - " +
-			advars.Claude + "-web\n - " +
-			advars.Bing)
+		if _, err := ctx.SendPlainMessage(false, "修改失败，AI类型不正确。请选择以下类型：\n - "+
+			advars.OpenAIAPI+"\n - "+
+			advars.OpenAIWeb+"\n - "+
+			advars.Claude+"\n - "+
+			advars.Claude+"-web\n - "+
+			advars.Bing); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
@@ -623,7 +683,9 @@ func insertRoleCommand(ctx *zero.Ctx) {
 		var preset []openai.ChatCompletionMessage
 		if err := json.Unmarshal([]byte(newRole.Content), &preset); err != nil {
 			logrus.Error("预设解析失败: ", err)
-			ctx.Send("预设解析失败: " + err.Error())
+			if _, err = ctx.SendPlainMessage(false, "预设解析失败: "+err.Error()); err != nil {
+				logrus.Error(err)
+			}
 			return
 		}
 	}
@@ -633,7 +695,9 @@ func insertRoleCommand(ctx *zero.Ctx) {
 		// 等待用户下一步选择
 		if index := waitCommand(ctx, time.Second*60, "已存在相同的预设，是否覆盖？", []string{"否", "是"}); index < 1 {
 			if index == 0 {
-				ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("已取消"))
+				if _, err := ctx.SendPlainMessage(true, nano.Text("已取消")); err != nil {
+					logrus.Error(err)
+				}
 			}
 			return
 		}
@@ -641,22 +705,32 @@ func insertRoleCommand(ctx *zero.Ctx) {
 	}
 
 	if err := repo.EditRole(newRole); err != nil {
-		ctx.Send("添加失败: " + err.Error())
+		logrus.Error(err)
+		if _, err = ctx.SendPlainMessage(false, "添加失败: "+err.Error()); err != nil {
+			logrus.Error(err)
+		}
 	} else {
-		ctx.Send("添加成功")
+		if _, err = ctx.SendPlainMessage(false, "添加成功"); err != nil {
+			logrus.Error(err)
+		}
 	}
 }
 
 // 删除预设
-func deleteRoleCommand(ctx *zero.Ctx) {
+func deleteRoleCommand(ctx *nano.Ctx) {
 	key := ctx.State["regex_matched"].([]string)[1]
 	roles, err := repo.FindRoles(key, "")
 	if err != nil {
-		ctx.Send("删除失败: " + err.Error())
+		logrus.Error(err)
+		if _, err = ctx.SendPlainMessage(false, "删除失败: "+err.Error()); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 	if len(roles) == 0 {
-		ctx.Send("`" + key + "`不存在")
+		if _, err = ctx.SendPlainMessage(false, "`"+key+"`不存在"); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
@@ -673,37 +747,51 @@ func deleteRoleCommand(ctx *zero.Ctx) {
 	}
 
 	repo.RemoveRole(roles[index].Id)
-	ctx.Send("`" + key + "#" + roles[0].Type + "`已删除")
+	if _, err = ctx.SendPlainMessage(false, "`"+key+"#"+roles[0].Type+"`已删除"); err != nil {
+		logrus.Error(err)
+	}
 }
 
 // 预设列表
-func rolesCommand(ctx *zero.Ctx) {
+func rolesCommand(ctx *nano.Ctx) {
 	doc := "预设列表：\n"
 	preset, err := repo.FindRoles("", "")
 	if err != nil {
-		ctx.Send(doc + "None.")
+		logrus.Error(err)
+		if _, err = ctx.SendPlainMessage(false, doc+"None."); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 	if len(preset) <= 0 {
-		ctx.Send(doc + "None.")
+		if _, err = ctx.SendPlainMessage(false, doc+"None."); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 	for _, token := range preset {
 		doc += padding(token.Type, 20) + " | " + token.Key + "\n"
 	}
-	ctx.Send(doc)
+	if _, err = ctx.SendPlainMessage(false, doc); err != nil {
+		logrus.Error(err)
+	}
 }
 
 // 预设明细
-func roleItemCommand(ctx *zero.Ctx) {
+func roleItemCommand(ctx *nano.Ctx) {
 	key := ctx.State["regex_matched"].([]string)[1]
 	roles, err := repo.FindRoles(key, "")
 	if err != nil {
-		ctx.Send("查询失败: " + err.Error())
+		logrus.Error(err)
+		if _, err = ctx.SendPlainMessage(false, "查询失败: "+err.Error()); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 	if len(roles) == 0 {
-		ctx.Send("`" + key + "`不存在")
+		if _, err = ctx.SendPlainMessage(false, "`"+key+"`不存在"); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
@@ -719,12 +807,12 @@ func roleItemCommand(ctx *zero.Ctx) {
 		}
 	}
 
-	msg := make(message.Message, 1)
-	msg[0] = ctxext.FakeSenderForwardNode(ctx, message.Text(formatRole(roles[index])))
-	ctx.Send(msg)
+	if _, err = ctx.SendPlainMessage(false, formatRole(roles[index])); err != nil {
+		logrus.Error(err)
+	}
 }
 
-func switchAICommand(ctx *zero.Ctx) {
+func switchAICommand(ctx *nano.Ctx) {
 	bot := ctx.State["regex_matched"].([]string)[1]
 	var cctx adtypes.ConversationContext
 	switch bot {
@@ -739,43 +827,60 @@ func switchAICommand(ctx *zero.Ctx) {
 		deleteConversationContext(ctx)
 		c, err := createConversationContext(ctx, bot)
 		if err != nil {
-			ctx.Send(err.Error())
+			logrus.Error(err)
+			if _, err = ctx.SendPlainMessage(false, err); err != nil {
+				logrus.Error(err)
+			}
 			return
 		}
 		cctx = c
 	default:
-		ctx.Send("未知的AI类型：`" + bot + "`")
+		if _, err := ctx.SendPlainMessage(false, "未知的AI类型：`"+bot+"`"); err != nil {
+			logrus.Error(err)
+		}
 		return
 	}
 
 	lmt.Remove(cctx.Id, cctx.Bot)
 	store.DeleteOnline(cctx.Id)
-	ctx.Send("已切换`" + bot + "`AI模型")
+	if _, err := ctx.SendPlainMessage(false, "已切换`"+bot+"`AI模型"); err != nil {
+		logrus.Error(err)
+	}
 }
 
 // 等待下一步指令，返回指令下标，-1取消，index对应cmd
-func waitCommand(ctx *zero.Ctx, timeout time.Duration, tips string, cmd []string) int {
+func waitCommand(ctx *nano.Ctx, timeout time.Duration, tips string, cmd []string) int {
 	cmdtips := ""
 	for i, c := range cmd {
 		cmdtips += "[" + strconv.Itoa(i) + "] : " + c + "\n"
 	}
-	ctx.Send(message.Text(tips + "\n发送序号:\n" + cmdtips + " \n发送\"取消\"终止执行"))
-	recv, cancel := zero.NewFutureEvent("message", 999, true, zero.RegexRule(`^(取消|\d+)$`), zero.CheckUser(ctx.Event.UserID)).Repeat()
+	if _, err := ctx.SendPlainMessage(false, tips+"\n发送序号:\n"+cmdtips+" \n发送\"取消\"终止执行"); err != nil {
+		logrus.Error(err)
+		return -1
+	}
+	recv, cancel := nano.NewFutureEvent("message", 999, true, nano.RegexRule(`^(取消|\d+)$`), nano.CheckUser(ctx.Message.Author.ID)).Repeat()
 	defer cancel()
 	for {
 		select {
 		case <-time.After(timeout):
-			ctx.Send(message.Text("等待超时，已取消"))
+			if _, err := ctx.SendPlainMessage(false, "等待超时，已取消"); err != nil {
+				logrus.Error(err)
+			}
 			return -1
 		case r := <-recv:
-			nextcmd := r.Event.Message.String()
+			nextcmd := r.MessageString()
 			if nextcmd == "取消" {
-				ctx.Send(message.Text("已取消"))
+				if _, err := ctx.SendPlainMessage(false, "已取消"); err != nil {
+					logrus.Error(err)
+				}
 				return -1
 			}
 			index, err := strconv.Atoi(nextcmd)
 			if err != nil || index < 0 || index > len(cmd)-1 {
-				ctx.Send(message.Text("请输入正确的序号"))
+				if _, err = ctx.SendPlainMessage(false, "请输入正确的序号"); err != nil {
+					logrus.Error(err)
+					return -1
+				}
 				continue
 			}
 			return index

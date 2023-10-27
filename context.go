@@ -2,23 +2,16 @@ package llm
 
 import (
 	"errors"
-	"github.com/FloatTech/floatbox/web"
-	"github.com/google/uuid"
-	"github.com/wdvxdr1123/ZeroBot/message"
-	"os"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/bincooo/chatgpt-adapter/vars"
 	"github.com/bincooo/llm-plugin/internal/repo"
 	"github.com/bincooo/llm-plugin/internal/types"
+	nano "github.com/fumiama/NanoBot"
 	"github.com/sirupsen/logrus"
+	"strings"
+	"sync"
 
 	autotypes "github.com/bincooo/chatgpt-adapter/types"
 	claudevars "github.com/bincooo/claude-api/vars"
-	zero "github.com/wdvxdr1123/ZeroBot"
 )
 
 var (
@@ -30,28 +23,14 @@ const (
 	BaseChain = ""
 )
 
-func deleteConversationContext(ctx *zero.Ctx) {
+func deleteConversationContext(ctx *nano.Ctx) {
 	mu.Lock()
 	defer mu.Unlock()
-
-	var id int64 = 0
-	if ctx.Event.GroupID == 0 {
-		id = ctx.Event.UserID
-	} else {
-		id = ctx.Event.GroupID
-	}
-	key := strconv.FormatInt(id, 10)
-	delete(contextStore, key)
+	delete(contextStore, getId(ctx))
 }
 
-func getId(ctx *zero.Ctx) string {
-	var id int64 = 0
-	if ctx.Event.GroupID == 0 {
-		id = ctx.Event.UserID
-	} else {
-		id = ctx.Event.GroupID
-	}
-	return strconv.FormatInt(id, 10)
+func getId(ctx *nano.Ctx) string {
+	return ctx.Message.ChannelID
 }
 
 func updateConversationContext(cctx autotypes.ConversationContext) {
@@ -61,7 +40,7 @@ func updateConversationContext(cctx autotypes.ConversationContext) {
 	logrus.Infoln("[MiaoX] - 更新ConversationContext： ", cctx.Id)
 }
 
-func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.ConversationContext, error) {
+func createConversationContext(ctx *nano.Ctx, bot string) (autotypes.ConversationContext, error) {
 	key := getId(ctx)
 
 	if cctx, ok := contextStore[key]; ok {
@@ -177,52 +156,52 @@ func createConversationContext(ctx *zero.Ctx, bot string) (autotypes.Conversatio
 	return cctx, nil
 }
 
-func parseMessage(ctx *zero.Ctx, images bool) string {
+func parseMessage(ctx *nano.Ctx, images bool) string {
 	// and more...
 	text := ctx.ExtractPlainText()
 	if !images || strings.TrimSpace(text) == "" {
 		return text
 	}
 
-	if image := tryImage(ctx); image != "" {
-		data, err := web.GetData(image)
-		if err != nil {
-			logrus.Error(err)
-			goto label
-		}
-		path := "data/" + uuid.NewString() + ".jpg"
-		err = os.WriteFile(path, data, 0666)
-		if err != nil {
-			logrus.Error(err)
-			goto label
-		}
-		text = "{image:" + path + "}\n" + text
-		go func() {
-			time.Sleep(30 * time.Second)
-			_ = os.Remove(path)
-		}()
-	}
-label:
+	//	if image := tryImage(ctx); image != "" {
+	//		data, err := web.GetData(image)
+	//		if err != nil {
+	//			logrus.Error(err)
+	//			goto label
+	//		}
+	//		path := "data/" + uuid.NewString() + ".jpg"
+	//		err = os.WriteFile(path, data, 0666)
+	//		if err != nil {
+	//			logrus.Error(err)
+	//			goto label
+	//		}
+	//		text = "{image:" + path + "}\n" + text
+	//		go func() {
+	//			time.Sleep(30 * time.Second)
+	//			_ = os.Remove(path)
+	//		}()
+	//	}
+	//label:
 	return text
 }
 
 // tryImage 消息含有图片返回
-func tryImage(ctx *zero.Ctx) string {
-	messages := ctx.Event.Message
-	for _, msg := range messages {
-		if msg.Type != "reply" {
-			continue
-		}
-		replyMessage := ctx.GetMessage(message.NewMessageIDFromString(msg.Data["id"]))
-		for _, e := range replyMessage.Elements {
-			if e.Type != "image" {
-				continue
-			}
-			if u := e.Data["url"]; u != "" {
-				return u
-			}
-		}
-		break
-	}
-	return ""
-}
+//func tryImage(ctx *nano.Ctx) string {
+//	messages := ctx.Event.Message
+//	for _, msg := range messages {
+//		if msg.Type != "reply" {
+//			continue
+//		}
+//		replyMessage := ctx.GetMessage(message.NewMessageIDFromString(msg.Data["id"]))
+//		for _, e := range replyMessage.Elements {
+//			if e.Type != "image" {
+//				continue
+//			}
+//			if u := e.Data["url"]; u != "" {
+//				return u
+//			}
+//		}
+//		break
+//	}
+//	return ""
+//}

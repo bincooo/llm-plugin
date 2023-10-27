@@ -1,8 +1,10 @@
 package vars
 
-import "github.com/FloatTech/zbputils/control"
+import (
+	nano "github.com/fumiama/NanoBot"
+)
 
 var (
 	Loading []byte
-	E       *control.Engine
+	E       *nano.Engine
 )

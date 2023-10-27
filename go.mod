@@ -4,13 +4,15 @@ go 1.20
 
 require (
 	github.com/BurntSushi/toml v1.3.2
-	github.com/FloatTech/floatbox v0.0.0-20230331064925-9af336a84944
+	github.com/FloatTech/NanoBot-Plugin v0.1.5
+	github.com/FloatTech/floatbox v0.0.0-20231017134949-ae5059ebace7
 	github.com/FloatTech/sqlite v1.6.3
 	github.com/FloatTech/zbpctrl v1.6.0
-	github.com/FloatTech/zbputils v1.7.0
 	github.com/bincooo/chatgpt-adapter v1.0.13-0.20231025122639-00227ffa6a59
 	github.com/bincooo/claude-api v1.0.3
 	github.com/bincooo/edge-api v1.0.2-0.20231025122248-bfd3f9702361
+	github.com/bincooo/go-openai v0.0.0-20231023102128-e9d3ccb5c34b
+	github.com/fumiama/NanoBot v0.0.0-20231019150356-9a3fb63d7441
 	github.com/google/uuid v1.3.1
 	github.com/pp-group/edge-tts-go v1.1.2
 	github.com/sirupsen/logrus v1.9.3
@@ -18,16 +20,12 @@ require (
 )
 
 require (
-	github.com/FloatTech/gg v1.1.2 // indirect
-	github.com/FloatTech/imgfactory v0.2.2-0.20230315152233-49741fc994f9 // indirect
-	github.com/FloatTech/rendercard v0.0.10-0.20230223064326-45d29fa4ede9 // indirect
-	github.com/FloatTech/ttl v0.0.0-20220715042055-15612be72f5b // indirect
+	github.com/FloatTech/ttl v0.0.0-20230307105452-d6f7b2b647d1 // indirect
 	github.com/RomiChan/syncx v0.0.0-20221202055724-5f842c53020e // indirect
 	github.com/RomiChan/websocket v1.4.3-0.20220227141055-9b2c6168c9c5 // indirect
 	github.com/acheong08/OpenAIAuth v0.0.0-20230625142757-7b01ccd04f63 // indirect
 	github.com/aliyun/aliyun-oss-go-sdk v2.2.7+incompatible // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
-	github.com/bincooo/go-openai v0.0.0-20231023102128-e9d3ccb5c34b // indirect
 	github.com/bincooo/openai-wapi v1.0.1 // indirect
 	github.com/bincooo/requests v0.0.0-20230720064210-7eae5d6c9d1e // indirect
 	github.com/bitly/go-simplejson v0.5.0 // indirect
@@ -36,19 +34,15 @@ require (
 	github.com/bogdanfinn/utls v1.5.15 // indirect
 	github.com/bytedance/sonic v1.9.2 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
-	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
-	github.com/ericpauley/go-quantize v0.0.0-20200331213906-ae555eb2afa4 // indirect
 	github.com/fumiama/cron v1.3.0 // indirect
-	github.com/fumiama/go-base16384 v1.6.4 // indirect
+	github.com/fumiama/go-base16384 v1.7.0 // indirect
 	github.com/fumiama/go-registry v0.2.6 // indirect
 	github.com/fumiama/go-simple-protobuf v0.1.0 // indirect
 	github.com/fumiama/gofastTEA v0.0.10 // indirect
-	github.com/fumiama/imgsz v0.0.2 // indirect
 	github.com/fumiama/jieba v0.0.0-20221203025406-36c17a10b565 // indirect
 	github.com/gaukas/godicttls v0.0.3 // indirect
-	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.15.15 // indirect
@@ -56,6 +50,7 @@ require (
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/nirasan/go-oauth-pkce-code-verifier v0.0.0-20220510032225-4f9f17eaec4c // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pp-group/file-helper v0.0.2 // indirect
 	github.com/refraction-networking/utls v1.3.2 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20220927061507-ef77025ab5aa // indirect
@@ -71,9 +66,8 @@ require (
 	golang.org/x/arch v0.4.0 // indirect
 	golang.org/x/crypto v0.9.0 // indirect
 	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db // indirect
-	golang.org/x/image v0.3.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	modernc.org/libc v1.22.2 // indirect

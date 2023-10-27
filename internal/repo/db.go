@@ -5,8 +5,8 @@ import (
 	"github.com/FloatTech/floatbox/ctxext"
 	sql "github.com/FloatTech/sqlite"
 	"github.com/bincooo/llm-plugin/internal/vars"
+	nano "github.com/fumiama/NanoBot"
 	"github.com/sirupsen/logrus"
-	zero "github.com/wdvxdr1123/ZeroBot"
 	"strings"
 	"sync"
 	"time"
@@ -50,10 +50,11 @@ var (
 		sql: &sql.Sqlite{},
 	}
 
-	OnceOnSuccess = ctxext.DoOnceOnSuccess(func(ctx *zero.Ctx) bool {
+	OnceOnSuccess = ctxext.DoOnceOnSuccess(func(ctx *nano.Ctx) bool {
 		ready, err := postRef()
 		if err != nil {
-			ctx.Send(err.Error())
+			logrus.Error(err)
+			_, _ = ctx.SendPlainMessage(false, err.Error())
 		}
 		return ready
 	})

@@ -3,21 +3,20 @@ package util
 import (
 	"github.com/bincooo/edge-api/util"
 	"github.com/bincooo/llm-plugin/internal/repo/store"
+	nano "github.com/fumiama/NanoBot"
 	"github.com/sirupsen/logrus"
-	"github.com/wdvxdr1123/ZeroBot/message"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
 // String转换消息对象MessageSegment
-func StringToMessageSegment(uid, msg string) []message.MessageSegment {
+func StringToMessageSegment(uid, msg string) []nano.MessageSegment {
 	compileRegex := regexp.MustCompile(`\[@[^]]+]`)
 	matches := compileRegex.FindAllStringSubmatch(msg, -1)
 	logrus.Info("StringToMessageSegment CQ:At:: ", matches)
 	pos := 0
 	online := store.GetOnline(uid)
-	var slice []message.MessageSegment
+	var slice []nano.MessageSegment
 	if len(online) == 0 {
 		goto label
 	}
@@ -45,18 +44,14 @@ func StringToMessageSegment(uid, msg string) []message.MessageSegment {
 		})
 
 		if contain {
-			slice = append(slice, message.Text(msg[pos:index]))
+			slice = append(slice, nano.Text(msg[pos:index]))
 			pos = index + len(qq) + 3
-			at, err := strconv.ParseInt(strings.TrimSpace(qq), 10, 64)
-			if err != nil {
-				continue
-			}
-			slice = append(slice, message.At(at))
+			slice = append(slice, nano.At(strings.TrimSpace(qq)))
 		}
 	}
 label:
 	if len(msg)-1 > pos {
-		slice = append(slice, message.Text(msg[pos:]))
+		slice = append(slice, nano.Text(msg[pos:]))
 	}
 
 	return slice
