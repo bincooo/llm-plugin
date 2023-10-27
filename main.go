@@ -161,12 +161,13 @@ func init() {
 		Handle(switchRoleCommand)
 	engine.OnMessageFullMatch("历史对话", nano.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(historyCommand)
-	engine.OnMessageFullMatch("语音列表", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
-		Handle(ttsCommand)
-	engine.OnMessageFullMatch("关闭语音", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
-		Handle(closeTTSCommand)
-	engine.OnMessageRegex(`[开启|切换]语音\s?(.+)`, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
-		Handle(switchTTSCommand)
+	// TODO - 语音也没想好处理方式，先注释
+	//engine.OnMessageFullMatch("语音列表", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	//	Handle(ttsCommand)
+	//engine.OnMessageFullMatch("关闭语音", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	//	Handle(closeTTSCommand)
+	//engine.OnMessageRegex(`[开启|切换]语音\s?(.+)`, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	//	Handle(switchTTSCommand)
 	customPriority(engine.OnMessage(nano.OnlyToMe, repo.OnceOnSuccess), "inc:9").SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
 }
@@ -682,6 +683,7 @@ func switchRoleCommand(ctx *nano.Ctx) {
 	}
 }
 
+// TODO - 坏了，，，预设内容过长，老马不给发送
 // 添加预设
 func insertRoleCommand(ctx *nano.Ctx) {
 	value := ctx.State["regex_matched"].([]string)[1]
