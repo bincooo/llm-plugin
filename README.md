@@ -1,6 +1,6 @@
 ## 描述
 
-这是`ZeroBot-Plugin`的一个AI接入插件，集成了`openai-api` 、`openai-web`、 `BingAI`、`claude`
+这是`NanoBot-Plugin`的一个AI接入插件，集成了`openai-api` 、`openai-web`、 `BingAI`、`claude`
 
 内部实现了等待对话，web可视化配置。拦截链实现：内置了`cahce`（对话缓存）、`tmpl`（模板引擎）、`online`（在线人缓存）
 
@@ -190,4 +190,4 @@ import (
 ```
 
 ### 启动
-启动`ZeroBot-Plugin`
+启动`NanoBot-Plugin`
