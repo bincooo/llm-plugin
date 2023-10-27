@@ -1,11 +1,13 @@
 package llm
 
 import (
+	"encoding/json"
 	"github.com/BurntSushi/toml"
 	"github.com/FloatTech/floatbox/file"
 	"github.com/FloatTech/floatbox/web"
 	"github.com/FloatTech/zbputils/control"
 	"github.com/FloatTech/zbputils/ctxext"
+	"github.com/bincooo/go-openai"
 	"github.com/bincooo/llm-plugin/internal/chain"
 	"github.com/bincooo/llm-plugin/internal/repo"
 	"github.com/bincooo/llm-plugin/internal/repo/store"
@@ -615,6 +617,15 @@ func insertRoleCommand(ctx *zero.Ctx) {
 			advars.Claude + "-web\n - " +
 			advars.Bing)
 		return
+	}
+
+	if newRole.Type == advars.OpenAIAPI && newRole.Content != "" {
+		var preset []openai.ChatCompletionMessage
+		if err := json.Unmarshal([]byte(newRole.Content), &preset); err != nil {
+			logrus.Error("预设解析失败: ", err)
+			ctx.Send("预设解析失败: " + err.Error())
+			return
+		}
 	}
 
 	dbRole := repo.GetRole("", newRole.Key, newRole.Type)
