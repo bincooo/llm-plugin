@@ -2,7 +2,7 @@
 
 这是`NanoBot-Plugin`的一个AI接入插件，集成了`openai-api` 、`openai-web`、 `BingAI`、`claude`
 
-内部实现了等待对话，web可视化配置。拦截链实现：内置了`cahce`（对话缓存）、`tmpl`（模板引擎）、`online`（在线人缓存）
+内部实现了等待对话，指令配置。拦截链实现：内置了`cahce`（对话缓存）、`tmpl`（模板引擎）、`online`（在线人缓存）
 
 ---
 ### 内置llm对接实现：
@@ -70,8 +70,20 @@
 鲁迪斯: “你好啊，喵小爱”
 ```
 
-
-
+模版内置可用函数：
+```
+contains(str, str)  : 判断文字是否包含子串
+rand(int, int)      : 随机数
+randvar(str ...)    : 多个字符串随机
+set(str, str)       : 缓存键值对
+```
+使用:
+```
+{{contains "Abc123", "bc"}}    : 结果为true
+{{rand 1 3}}                   : 结果为 1~3
+{{randvar "张三" "李四" "王五"}} : 结果为 "张三"、"李四"、"王五"中的一个
+{{set "key1" "你好"}}           : 可在content模板中设置，然后在message模版中获取
+```
 
 逻辑运算：
 
