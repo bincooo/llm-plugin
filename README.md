@@ -135,7 +135,7 @@ proxy = "http:127.0.0.1:7890"
 ```
 key     string  // 名称
 type    string  // 类型
-content string  // 预设内容,如果是openai-api，需要是[] array json格式
+preset  string  // 预设内容,如果是openai-api，需要是[] array json格式
 message string  // 消息模版
 chain   string  // 拦截处理器
 section int     // 是否分段输出
