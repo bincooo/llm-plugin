@@ -2,6 +2,7 @@ package llm
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/FloatTech/NanoBot-Plugin/utils/ctxext"
 	"github.com/FloatTech/floatbox/file"
@@ -699,6 +700,16 @@ func switchRoleCommand(ctx *nano.Ctx) {
 // 添加预设
 func insertRoleCommand(ctx *nano.Ctx) {
 	value := ctx.State["regex_matched"].([]string)[1]
+
+	// 分块接收
+	if value == "section" {
+		i, result := waitBlock(ctx, 60*time.Second, "请输入你的预设内容（分批发送）")
+		if i == -1 {
+			return
+		}
+		value = result
+	}
+
 	value = strings.ReplaceAll(value, "&#91;", "[")
 	value = strings.ReplaceAll(value, "&#93;", "]")
 	value = strings.ReplaceAll(value, `\n`, "[!n]")
@@ -828,7 +839,7 @@ func rolesCommand(ctx *nano.Ctx) {
 	}
 }
 
-// 预设明细
+// 预设明细（可能预设太长无法发送的情况，所以只在后台打印）
 func roleItemCommand(ctx *nano.Ctx) {
 	key := ctx.State["regex_matched"].([]string)[1]
 	roles, err := repo.FindRoles(key, "")
@@ -858,7 +869,13 @@ func roleItemCommand(ctx *nano.Ctx) {
 		}
 	}
 
-	if _, err = ctx.SendPlainMessage(false, formatRole(roles[index])); err != nil {
+	//if _, err = ctx.SendPlainMessage(false, formatRole(roles[index])); err != nil {
+	//	logrus.Error(err)
+	//}
+	fmt.Println("================ ↓↓↓↓↓【" + roles[index].Key + "】预设 ↓↓↓↓↓ ================")
+	fmt.Println(formatRole(roles[index]))
+	fmt.Println("================ ↑↑↑↑↑【" + roles[index].Key + "】预设 ↑↑↑↑↑ ================")
+	if _, err = ctx.SendPlainMessage(false, "已在后台打印"); err != nil {
 		logrus.Error(err)
 	}
 }
@@ -935,6 +952,53 @@ func waitCommand(ctx *nano.Ctx, timeout time.Duration, tips string, cmd []string
 				continue
 			}
 			return index
+		}
+	}
+}
+
+// 分块接收，-1终止（异常、指令终止），0结束
+func waitBlock(ctx *nano.Ctx, timeout time.Duration, tips string) (int, string) {
+	var slice []func()
+	defer func() {
+		for _, cancel := range slice {
+			cancel()
+		}
+	}()
+
+	pref := ""
+	result := ""
+
+	for {
+		if _, err := ctx.SendPlainMessage(false, pref+tips+" \n发送\"取消\"终止执行"); err != nil {
+			logrus.Error(err)
+			return -1, result
+		}
+
+		recv, cancel := nano.NewFutureEvent("message", 999, true, nano.RegexRule(`([\s\S]+)$`), nano.CheckUser(ctx.Message.Author.ID)).Repeat()
+		slice = append(slice, cancel)
+
+		select {
+		case <-time.After(timeout):
+			if _, err := ctx.SendPlainMessage(false, "等待超时，已取消"); err != nil {
+				logrus.Error(err)
+			}
+			return -1, result
+		case r := <-recv:
+			nextcmd := r.MessageString()
+			if nextcmd == "取消" {
+				if _, err := ctx.SendPlainMessage(false, "已取消"); err != nil {
+					logrus.Error(err)
+				}
+				return -1, result
+			}
+
+			if nextcmd == "结束" {
+				return 0, result
+			}
+
+			// 接收
+			pref = "[✓]已接收，请继续\n\n"
+			result += nextcmd
 		}
 	}
 }

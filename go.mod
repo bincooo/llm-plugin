@@ -16,7 +16,6 @@ require (
 	github.com/google/uuid v1.3.1
 	github.com/pp-group/edge-tts-go v1.1.2
 	github.com/sirupsen/logrus v1.9.3
-	github.com/wdvxdr1123/ZeroBot v1.7.5-0.20231009162356-57f71b9f5258
 )
 
 require (
@@ -58,11 +57,10 @@ require (
 	github.com/samber/lo v1.37.0 // indirect
 	github.com/stretchr/testify v1.8.3 // indirect
 	github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5 // indirect
-	github.com/tidwall/gjson v1.14.4 // indirect
-	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/wangluozhe/fhttp v0.0.0-20230512135433-5c2ebfb4868a // indirect
+	github.com/wdvxdr1123/ZeroBot v1.7.5-0.20231009162356-57f71b9f5258 // indirect
 	golang.org/x/arch v0.4.0 // indirect
 	golang.org/x/crypto v0.9.0 // indirect
 	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db // indirect
