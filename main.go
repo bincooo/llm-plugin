@@ -47,6 +47,7 @@ const help = `- @Bot + 文本内容
 
 var (
 	prio   = -1
+	retry  = 1
 	engine = nano.Register("miaox", &ctrl.Options[*nano.Ctx]{
 		Help:              help,
 		Brief:             "喵小爱-AI适配器",
@@ -340,8 +341,9 @@ func conversationCommand(ctx *nano.Ctx) {
 
 	args := cctx.Data.(types.ConversationContextArgs)
 	args.Nickname = ctx.Message.Member.Nick
-	if ctx.Message.Member.User != nil {
-		args.Current = ctx.Message.Member.User.ID
+	if ctx.Message.Author != nil {
+		args.Current = ctx.Message.Author.ID
+		args.Nickname = ctx.Message.Author.Username
 	}
 	cctx.Data = args
 
@@ -369,20 +371,27 @@ func conversationCommand(ctx *nano.Ctx) {
 		section = role.Section == 1
 	}
 
-	// timer := util.NewGifTimer(ctx, section)
+	if section { // 仅私域可用？
+		section = nano.OnlyPrivate(ctx)
+	}
+
+	timer := util.NewGifTimer(ctx, section)
 	cacheMessage := make([]string, 0)
 	lmtHandle := func(response adtypes.PartialResponse) {
-		//if response.Status == advars.Begin {
-		//	timer.Refill()
-		//}
+		if response.Status == advars.Begin {
+			timer.Refill()
+		}
 
 		if len(strings.TrimSpace(response.Message)) > 0 {
 			if section /* && args.Tts == "" */ {
 				segment := util.StringToMessageSegment(cctx.Id, response.Message)
-				if _, err = ctx.SendChain(append(segment, nano.ReplyTo(ctx.Message.ID))...); err != nil {
+				if err = util.Retry(retry, func() error {
+					_, e := ctx.SendChain(append(segment, nano.ReplyTo(ctx.Message.ID))...)
+					return e
+				}); err != nil {
 					logrus.Error(err)
 				}
-				// timer.Refill()
+				timer.Refill()
 			} else {
 				// 开启语音就不要用分段响应了
 				cacheMessage = append(cacheMessage, response.Message)
@@ -395,7 +404,7 @@ func conversationCommand(ctx *nano.Ctx) {
 			if _, err = ctx.SendPlainMessage(true, nano.Text(response.Error)); err != nil {
 				logrus.Error(err)
 			}
-			// timer.Release()
+			timer.Release()
 			return
 		}
 
@@ -427,13 +436,16 @@ func conversationCommand(ctx *nano.Ctx) {
 				msg := strings.TrimSpace(strings.Join(cacheMessage, ""))
 				if msg != "" {
 					segment := util.StringToMessageSegment(cctx.Id, msg)
-					if _, err = ctx.SendChain(append(segment, nano.ReplyTo(ctx.Message.ID))...); err != nil {
+					if err = util.Retry(retry, func() error {
+						_, e := ctx.SendChain(append(segment, nano.ReplyTo(ctx.Message.ID))...)
+						return e
+					}); err != nil {
 						logrus.Error(err)
 					}
 				}
 			}
 			logrus.Info("[MiaoX] - 结束应答")
-			// timer.Release()
+			timer.Release()
 		}
 	}
 

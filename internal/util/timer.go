@@ -2,18 +2,17 @@ package util
 
 import (
 	"github.com/bincooo/llm-plugin/internal/vars"
-	"github.com/wdvxdr1123/ZeroBot/message"
+	nano "github.com/fumiama/NanoBot"
+	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
-
-	zero "github.com/wdvxdr1123/ZeroBot"
 )
 
 const (
 	waitTimeout = 3 * time.Second
 )
 
-func NewGifTimer(ctx *zero.Ctx, enable bool) *GifTimer {
+func NewGifTimer(ctx *nano.Ctx, enable bool) *GifTimer {
 	d := GifTimer{t: time.Now().Add(waitTimeout), closed: false, ctx: ctx}
 	if enable {
 		go d.run()
@@ -26,8 +25,8 @@ type GifTimer struct {
 	t         time.Time
 	next      bool
 	closed    bool
-	ctx       *zero.Ctx
-	messageId *message.MessageID
+	ctx       *nano.Ctx
+	messageId string
 }
 
 func (d *GifTimer) Refill() {
@@ -49,19 +48,37 @@ func (d *GifTimer) send() {
 	if d.closed {
 		return
 	}
-	if d.messageId != nil {
-		d.ctx.DeleteMessage(*d.messageId)
+	if d.messageId != "" {
+		if err := Retry(1, func() error {
+			return d.ctx.DeleteMessageInChannel(d.ctx.Message.ChannelID, d.messageId, true)
+		}); err != nil {
+			logrus.Error(err)
+		}
 	}
 	time.Sleep(500 * time.Millisecond)
-	messageId := d.ctx.Send(message.ImageBytes(vars.Loading))
-	d.messageId = &messageId
+	// messageId := d.ctx.Send(message.ImageBytes(vars.Loading))
+	var message *nano.Message
+	if err := Retry(1, func() error {
+		// m, e := d.ctx.SendPlainMessage(false, "...")
+		m, e := d.ctx.SendImageBytes(vars.Loading, false)
+		if e == nil {
+			message = m
+		}
+		return e
+	}); err != nil {
+		logrus.Error(err)
+	} else {
+		d.messageId = message.ID
+	}
 }
 
 func (d *GifTimer) run() {
 	for {
 		if d.closed {
-			if d.messageId != nil {
-				d.ctx.DeleteMessage(*d.messageId)
+			if err := Retry(1, func() error {
+				return d.ctx.DeleteMessageInChannel(d.ctx.Message.ChannelID, d.messageId, true)
+			}); err != nil {
+				logrus.Error(err)
 			}
 			return
 		}

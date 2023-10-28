@@ -1,11 +1,13 @@
 package util
 
 import (
+	"errors"
 	"github.com/bincooo/edge-api/util"
 	"github.com/bincooo/llm-plugin/internal/repo/store"
 	nano "github.com/fumiama/NanoBot"
 	"github.com/sirupsen/logrus"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -75,6 +77,25 @@ func HandleBingCaptcha(token string, err error) {
 			logrus.Error("尝试解析Bing人机检验失败：", e)
 		}
 	}
+}
+
+func Retry(count int, exec func() error) error {
+	if count <= 0 {
+		return errors.New("请提供有效的重试次数")
+	}
+
+	for i := 0; i <= count; i++ {
+		if err := exec(); err != nil {
+			if i == count {
+				return err
+			}
+			logrus.Warn("重试中["+strconv.Itoa(i+1)+"]: ", err)
+			continue
+		} else {
+			break
+		}
+	}
+	return nil
 }
 
 // 判断切片是否包含子元素
