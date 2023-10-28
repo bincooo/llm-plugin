@@ -18,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"math/rand"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -710,6 +711,12 @@ func insertRoleCommand(ctx *nano.Ctx) {
 		value = result
 	}
 
+	regex := regexp.MustCompile(`"""[^\n]`)
+	matched := regex.FindAllString(value, -1)
+	for _, s := range matched {
+		value = strings.Replace(value, s, s[:3]+"\n"+s[3:], -1)
+	}
+
 	value = strings.ReplaceAll(value, "&#91;", "[")
 	value = strings.ReplaceAll(value, "&#93;", "]")
 	value = strings.ReplaceAll(value, `\n`, "[!n]")
@@ -926,7 +933,7 @@ func waitCommand(ctx *nano.Ctx, timeout time.Duration, tips string, cmd []string
 		logrus.Error(err)
 		return -1
 	}
-	recv, cancel := nano.NewFutureEvent("message", 999, true, nano.RegexRule(`^(取消|\d+)$`), nano.CheckUser(ctx.Message.Author.ID)).Repeat()
+	recv, cancel := nano.NewFutureEvent("Message", 0, true, nano.RegexRule(`^(取消|\d+)$`)).Repeat()
 	defer cancel()
 	for {
 		select {
@@ -958,33 +965,29 @@ func waitCommand(ctx *nano.Ctx, timeout time.Duration, tips string, cmd []string
 
 // 分块接收，-1终止（异常、指令终止），0结束
 func waitBlock(ctx *nano.Ctx, timeout time.Duration, tips string) (int, string) {
-	var slice []func()
-	defer func() {
-		for _, cancel := range slice {
-			cancel()
-		}
-	}()
 
 	pref := ""
 	result := ""
 
 	for {
-		if _, err := ctx.SendPlainMessage(false, pref+tips+" \n发送\"取消\"终止执行"); err != nil {
+		if _, err := ctx.SendPlainMessage(false, pref+tips+" \n发送\"取消\"终止执行，发送\"结束\"完成接收"); err != nil {
 			logrus.Error(err)
 			return -1, result
 		}
 
-		recv, cancel := nano.NewFutureEvent("message", 999, true, nano.RegexRule(`([\s\S]+)$`), nano.CheckUser(ctx.Message.Author.ID)).Repeat()
-		slice = append(slice, cancel)
+		recv, cancel := nano.NewFutureEvent("Message", 0, true, nano.RegexRule(`^([\s\S]+)$`), nano.CheckUser(ctx.Message.Author.ID)).Repeat()
 
 		select {
 		case <-time.After(timeout):
+			cancel()
 			if _, err := ctx.SendPlainMessage(false, "等待超时，已取消"); err != nil {
 				logrus.Error(err)
 			}
 			return -1, result
 		case r := <-recv:
 			nextcmd := r.MessageString()
+			cancel()
+
 			if nextcmd == "取消" {
 				if _, err := ctx.SendPlainMessage(false, "已取消"); err != nil {
 					logrus.Error(err)
@@ -997,7 +1000,7 @@ func waitBlock(ctx *nano.Ctx, timeout time.Duration, tips string) (int, string) 
 			}
 
 			// 接收
-			pref = "[✓]已接收，请继续\n\n"
+			pref = "[✓] 已接收，请继续\n\n"
 			result += nextcmd
 		}
 	}
