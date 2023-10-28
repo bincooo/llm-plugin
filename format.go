@@ -28,8 +28,8 @@ type = "[TYPE]"
 chain = "[CHAIN]"
 section = [SECTION]
 
-content = """
-[CONTENT]
+preset = """
+[PRESET]
 """
 
 message = """"
@@ -70,6 +70,6 @@ func formatRole(role *repo.RoleConfig) string {
 	content = strings.Replace(content, "[CHAIN]", role.Chain, -1)
 	content = strings.Replace(content, "[SECTION]", strconv.Itoa(role.Section), -1)
 	content = strings.Replace(content, "[MESSAGE]", role.Message, -1)
-	content = strings.Replace(content, "[CONTENT]", role.Content, -1)
+	content = strings.Replace(content, "[PRESET]", role.Preset, -1)
 	return content
 }

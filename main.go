@@ -185,8 +185,8 @@ func globalCommand(ctx *nano.Ctx) {
 // 修改全局属性
 func editGlobalCommand(ctx *nano.Ctx) {
 	value := ctx.State["regex_matched"].([]string)[1]
-	value = strings.ReplaceAll(value, "&#91;", "[")
-	value = strings.ReplaceAll(value, "&#93;", "]")
+	value = strings.ReplaceAll(value, "&lt;", "<")
+	value = strings.ReplaceAll(value, "&gt;", ">")
 
 	var g repo.GlobalConfig
 	if _, err := toml.Decode(value, &g); err != nil {
@@ -461,8 +461,8 @@ func conversationCommand(ctx *nano.Ctx) {
 // 添加凭证
 func insertTokenCommand(ctx *nano.Ctx) {
 	value := ctx.State["regex_matched"].([]string)[1]
-	value = strings.ReplaceAll(value, "&#91;", "[")
-	value = strings.ReplaceAll(value, "&#93;", "]")
+	value = strings.ReplaceAll(value, "&lt;", "<")
+	value = strings.ReplaceAll(value, "&gt;", ">")
 
 	var newToken repo.TokenConfig
 	if _, err := toml.Decode(value, &newToken); err != nil {
@@ -684,7 +684,7 @@ func switchRoleCommand(ctx *nano.Ctx) {
 	args.Rid = role.Id
 	cctx.Data = args
 
-	cctx.Preset = role.Content
+	cctx.Preset = role.Preset
 	cctx.Format = role.Message
 	cctx.Chain = BaseChain + role.Chain
 	bot := cctx.Bot
@@ -717,8 +717,8 @@ func insertRoleCommand(ctx *nano.Ctx) {
 		value = strings.Replace(value, s, s[:3]+"\n"+s[3:], -1)
 	}
 
-	value = strings.ReplaceAll(value, "&#91;", "[")
-	value = strings.ReplaceAll(value, "&#93;", "]")
+	value = strings.ReplaceAll(value, "&lt;", "<")
+	value = strings.ReplaceAll(value, "&gt;", ">")
 	value = strings.ReplaceAll(value, `\n`, "[!n]")
 	value = strings.ReplaceAll(value, `\"`, "[!d]")
 
@@ -731,9 +731,9 @@ func insertRoleCommand(ctx *nano.Ctx) {
 		return
 	}
 
-	if newRole.Content != "" {
-		newRole.Content = strings.ReplaceAll(newRole.Content, "[!n]", `\n`)
-		newRole.Content = strings.ReplaceAll(newRole.Content, "[!d]", `\"`)
+	if newRole.Preset != "" {
+		newRole.Preset = strings.ReplaceAll(newRole.Preset, "[!n]", `\n`)
+		newRole.Preset = strings.ReplaceAll(newRole.Preset, "[!d]", `\"`)
 	}
 
 	if !validateType(newRole.Type) {
@@ -748,9 +748,9 @@ func insertRoleCommand(ctx *nano.Ctx) {
 		return
 	}
 
-	if newRole.Type == advars.OpenAIAPI && newRole.Content != "" {
+	if newRole.Type == advars.OpenAIAPI && newRole.Preset != "" {
 		var preset []openai.ChatCompletionMessage
-		if err := json.Unmarshal([]byte(newRole.Content), &preset); err != nil {
+		if err := json.Unmarshal([]byte(newRole.Preset), &preset); err != nil {
 			logrus.Error("预设解析失败: ", err)
 			if _, err = ctx.SendPlainMessage(false, "预设解析失败: "+err.Error()); err != nil {
 				logrus.Error(err)

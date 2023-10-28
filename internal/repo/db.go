@@ -39,7 +39,7 @@ type RoleConfig struct {
 	Id      string `db:"id"`
 	Key     string `db:"key"`
 	Type    string `db:"type"`    // 类型
-	Content string `db:"content"` // 预设内容
+	Preset  string `db:"content"` // 预设内容
 	Message string `db:"message"` // 消息模版
 	Chain   string `db:"chain"`   // 拦截处理器
 	Section int    `db:"section"` // 是否分段输出

@@ -135,7 +135,7 @@ func createConversationContext(ctx *nano.Ctx, bot string) (autotypes.Conversatio
 			logrus.Warn("预设`", g.Role, "`类型不匹配, 需要（", bot, "）实际为（", role.Type, "）")
 		} else {
 			args.Rid = role.Id
-			cctx.Preset = role.Content
+			cctx.Preset = role.Preset
 			cctx.Format = role.Message
 			if role.Chain != "" {
 				cctx.Chain += role.Chain
