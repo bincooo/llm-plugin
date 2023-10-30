@@ -621,11 +621,13 @@ func insertRoleCommand(ctx *zero.Ctx) {
 	}
 
 	if newRole.Type == advars.OpenAIAPI && newRole.Preset != "" {
-		var preset []openai.ChatCompletionMessage
-		if err := json.Unmarshal([]byte(newRole.Preset), &preset); err != nil {
-			logrus.Error("预设解析失败: ", err)
-			ctx.Send("预设解析失败: " + err.Error())
-			return
+		if !strings.Contains(newRole.Preset, "<!VARS!>") {
+			var preset []openai.ChatCompletionMessage
+			if err := json.Unmarshal([]byte(newRole.Preset), &preset); err != nil {
+				logrus.Error("预设解析失败: ", err)
+				ctx.Send("预设解析失败: " + err.Error())
+				return
+			}
 		}
 	}
 
