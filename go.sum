@@ -26,8 +26,8 @@ github.com/aliyun/aliyun-oss-go-sdk v2.2.7+incompatible h1:KpbJFXwhVeuxNtBJ74MCG
 github.com/aliyun/aliyun-oss-go-sdk v2.2.7+incompatible/go.mod h1:T/Aws4fEfogEE9v+HPhhw+CntffsBHJ8nXQCwKr0/g8=
 github.com/andybalholm/brotli v1.0.5 h1:8uQZIdzKmjc/iuPu7O2ioW48L81FgatrcpfFmiq/cCs=
 github.com/andybalholm/brotli v1.0.5/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
-github.com/bincooo/chatgpt-adapter v1.0.13-0.20231030213556-c32449a57f65 h1:qYM5pRye/seSPG25s5N2MzEAq16TTLFEJM2LHiFa/TY=
-github.com/bincooo/chatgpt-adapter v1.0.13-0.20231030213556-c32449a57f65/go.mod h1:AWlPgub/H2HSYcQ0rFOJpfM8kpc4N4UMP4YBOmPepvI=
+github.com/bincooo/chatgpt-adapter v1.0.13-0.20231030220848-8c7b2964ca06 h1:F993XvjmOGdjvcfecf70KkZEm5W4GGhcwUbUFPRodFo=
+github.com/bincooo/chatgpt-adapter v1.0.13-0.20231030220848-8c7b2964ca06/go.mod h1:AWlPgub/H2HSYcQ0rFOJpfM8kpc4N4UMP4YBOmPepvI=
 github.com/bincooo/claude-api v1.0.3 h1:A8/4DXC9tGD0kzx7rOxyVBoTuv09wUJTC/Kw5j9LNSQ=
 github.com/bincooo/claude-api v1.0.3/go.mod h1:qoD2FHwGq2+Ohl5xi+jFFYjAGxP0V1ImeIg6R05uqPQ=
 github.com/bincooo/edge-api v1.0.2-0.20231025124917-09f0d1754667 h1:O9e/vxKUjHNQsCs8K+1VtTThpcD2Q4aMba10vJwEUoM=

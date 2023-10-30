@@ -309,6 +309,7 @@ func conversationCommand(ctx *zero.Ctx) {
 	args := cctx.Data.(types.ConversationContextArgs)
 	args.Current = strconv.FormatInt(ctx.Event.Sender.ID, 10)
 	args.Nickname = ctx.Event.Sender.NickName
+	cctx.Name = args.Nickname
 	cctx.Data = args
 
 	images := false
