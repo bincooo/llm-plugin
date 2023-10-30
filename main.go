@@ -123,29 +123,29 @@ func init() {
 
 	engine.OnFullMatch("全局属性", zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(globalCommand)
-	engine.OnRegex(`^[添加|修改]全局属性\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`[添加|修改]全局属性\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(editGlobalCommand)
-	engine.OnRegex(`^[添加|修改]凭证\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`[添加|修改]凭证\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(insertTokenCommand)
-	engine.OnRegex(`^删除凭证\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`删除凭证\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(deleteTokenCommand)
 	engine.OnFullMatch("凭证列表", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).
 		Handle(tokensCommand)
-	engine.OnRegex(`^凭证明细\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`凭证明细\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(tokenItemCommand)
-	engine.OnRegex(`^切换凭证\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnRegex(`切换凭证\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTokensCommand)
 	engine.OnFullMatch("AI列表", repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(aiCommand)
 	engine.OnRegex(`切换AI\s+(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchAICommand)
-	engine.OnRegex(`^[添加|修改]预设\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`[添加|修改]预设\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(insertRoleCommand)
-	engine.OnRegex(`^删除预设\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`删除预设\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(deleteRoleCommand)
 	engine.OnFullMatch("预设列表", zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(rolesCommand)
-	engine.OnRegex(`^预设明细\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
+	engine.OnRegex(`预设明细\s+(\S+)`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(roleItemCommand)
 	engine.OnRegex(`[开启|切换]预设\s(\S+)`, zero.AdminPermission, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchRoleCommand)
@@ -578,7 +578,7 @@ func switchRoleCommand(ctx *zero.Ctx) {
 	args.Rid = role.Id
 	cctx.Data = args
 
-	cctx.Preset = role.Content
+	cctx.Preset = role.Preset
 	cctx.Format = role.Message
 	cctx.Chain = BaseChain + role.Chain
 	bot := cctx.Bot
@@ -604,9 +604,9 @@ func insertRoleCommand(ctx *zero.Ctx) {
 		return
 	}
 
-	if newRole.Content != "" {
-		newRole.Content = strings.ReplaceAll(newRole.Content, "[!n]", `\n`)
-		newRole.Content = strings.ReplaceAll(newRole.Content, "[!d]", `\"`)
+	if newRole.Preset != "" {
+		newRole.Preset = strings.ReplaceAll(newRole.Preset, "[!n]", `\n`)
+		newRole.Preset = strings.ReplaceAll(newRole.Preset, "[!d]", `\"`)
 	}
 
 	if !validateType(newRole.Type) {
@@ -619,9 +619,9 @@ func insertRoleCommand(ctx *zero.Ctx) {
 		return
 	}
 
-	if newRole.Type == advars.OpenAIAPI && newRole.Content != "" {
+	if newRole.Type == advars.OpenAIAPI && newRole.Preset != "" {
 		var preset []openai.ChatCompletionMessage
-		if err := json.Unmarshal([]byte(newRole.Content), &preset); err != nil {
+		if err := json.Unmarshal([]byte(newRole.Preset), &preset); err != nil {
 			logrus.Error("预设解析失败: ", err)
 			ctx.Send("预设解析失败: " + err.Error())
 			return
