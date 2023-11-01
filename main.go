@@ -46,8 +46,6 @@ const help = `- @Bot + 文本内容
 `
 
 var (
-	prio   = -1
-	retry  = 1
 	engine = nano.Register("miaox", &ctrl.Options[*nano.Ctx]{
 		Help:              help,
 		Brief:             "喵小爱-AI适配器",
@@ -353,10 +351,7 @@ func conversationCommand(ctx *nano.Ctx) {
 		if len(strings.TrimSpace(response.Message)) > 0 {
 			if section /* && args.Tts == "" */ {
 				segment := util.StringToMessageSegment(cctx.Id, response.Message)
-				if err = util.Retry(retry, func() error {
-					_, e := ctx.SendChain(append(segment, nano.ReplyTo(ctx.Message.ID))...)
-					return e
-				}); err != nil {
+				if _, err = ctx.SendChain(append(segment, nano.ReplyTo(ctx.Message.ID))...); err != nil {
 					logrus.Error(err)
 				}
 				timer.Refill()
@@ -404,10 +399,7 @@ func conversationCommand(ctx *nano.Ctx) {
 				msg := strings.TrimSpace(strings.Join(cacheMessage, ""))
 				if msg != "" {
 					segment := util.StringToMessageSegment(cctx.Id, msg)
-					if err = util.Retry(retry, func() error {
-						_, e := ctx.SendChain(append(segment, nano.ReplyTo(ctx.Message.ID))...)
-						return e
-					}); err != nil {
+					if _, err = ctx.SendChain(append(segment, nano.ReplyTo(ctx.Message.ID))...); err != nil {
 						logrus.Error(err)
 					}
 				}
