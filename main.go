@@ -7,6 +7,12 @@ import (
 	"github.com/FloatTech/NanoBot-Plugin/utils/ctxext"
 	"github.com/FloatTech/floatbox/file"
 	"github.com/FloatTech/floatbox/web"
+	ctrl "github.com/FloatTech/zbpctrl"
+	adapter "github.com/bincooo/chatgpt-adapter"
+	adstore "github.com/bincooo/chatgpt-adapter/store"
+	adtypes "github.com/bincooo/chatgpt-adapter/types"
+	advars "github.com/bincooo/chatgpt-adapter/vars"
+	claudevars "github.com/bincooo/claude-api/vars"
 	"github.com/bincooo/go-openai"
 	"github.com/bincooo/llm-plugin/internal/chain"
 	"github.com/bincooo/llm-plugin/internal/repo"
@@ -22,14 +28,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unsafe"
-
-	ctrl "github.com/FloatTech/zbpctrl"
-	adapter "github.com/bincooo/chatgpt-adapter"
-	adstore "github.com/bincooo/chatgpt-adapter/store"
-	adtypes "github.com/bincooo/chatgpt-adapter/types"
-	advars "github.com/bincooo/chatgpt-adapter/vars"
-	claudevars "github.com/bincooo/claude-api/vars"
 
 	_ "unsafe"
 )
@@ -70,38 +68,6 @@ var (
 		"要不你自己读读看拟写了什么 (╯‵□′)╯︵┻━┻",
 	}
 )
-
-//go:linkname _unsafe_priv_func github.com/fumiama/NanoBot.(*Matcher).setPriority
-func _unsafe_priv_func(p *nano.Matcher, i int)
-
-// inc:0 自增 priority 0~9, set:0 设置priority
-func customPriority(matcher *nano.Matcher, priority string) *nano.Matcher {
-	switch priority[:4] {
-	case "set:":
-		i, err := strconv.Atoi(priority[4:])
-		if err != nil {
-			panic(err)
-		}
-		_unsafe_priv_func(matcher, i)
-		return matcher
-	case "inc:":
-		i, err := strconv.Atoi(priority[4:])
-		if err != nil {
-			panic(err)
-		}
-		if i < 0 || i >= 10 {
-			panic("优先级增量范围0～9，实际为: " + strconv.Itoa(i))
-		}
-		if prio == -1 {
-			p := (*int)(unsafe.Pointer(uintptr(unsafe.Pointer(matcher)) + 3))
-			prio = *p
-		}
-		_unsafe_priv_func(matcher, prio+i)
-		return matcher
-	default:
-		panic("未知的优先级指令")
-	}
-}
 
 func init() {
 	vars.E = engine
@@ -171,7 +137,7 @@ func init() {
 	//	Handle(closeTTSCommand)
 	//engine.OnMessageRegex(`[开启|切换]语音\s?(.+)`, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 	//	Handle(switchTTSCommand)
-	customPriority(engine.OnMessage(nano.OnlyToMe, repo.OnceOnSuccess), "inc:9").SetBlock(true).Limit(ctxext.LimitByUser).
+	engine.OnMessage(nano.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(conversationCommand)
 }
 
