@@ -34,6 +34,9 @@ func (*TplInterceptor) Before(bot autotypes.Bot, ctx *autotypes.ConversationCont
 		if err != nil {
 			return false, err
 		}
+		if strings.Contains(result, "&lt;!VARS!>") {
+			result = strings.Replace(result, "&lt;!VARS!>", "<!VARS!>", -1)
+		}
 		ctx.Preset = result
 	}
 

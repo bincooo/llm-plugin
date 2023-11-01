@@ -66,29 +66,6 @@ var (
 	}
 )
 
-// inc:0 自增 priority 0~9, set:0 设置priority
-func customPriority(matcher *control.Matcher, priority string) *control.Matcher {
-	switch priority[:4] {
-	case "set:":
-		i, err := strconv.Atoi(priority[4:])
-		if err != nil {
-			panic(err)
-		}
-		return (*control.Matcher)((*zero.Matcher)(matcher).SetPriority(i))
-	case "inc:":
-		i, err := strconv.Atoi(priority[4:])
-		if err != nil {
-			panic(err)
-		}
-		if i < 0 || i >= 10 {
-			panic("优先级增量范围0～9，实际为: " + strconv.Itoa(i))
-		}
-		return (*control.Matcher)((*zero.Matcher)(matcher).SetPriority(matcher.Priority + i))
-	default:
-		panic("未知的优先级指令")
-	}
-}
-
 func init() {
 	vars.E = engine
 
@@ -121,6 +98,10 @@ func init() {
 		return ctx.Event.NoticeType == "group_recall" || ctx.Event.NoticeType == "friend_recall"
 	}, repo.OnceOnSuccess).SetBlock(false).Handle(recallMessageCommand)
 
+	// On事件添加时进行了第1次排序，SetPriority进行第2次排序
+	// 所以在没有修改优先级的情况下，先定义的事件优先级更低
+	engine.OnMessage(zero.OnlyToMe, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
+		Handle(conversationCommand)
 	engine.OnFullMatch("全局属性", zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
 		Handle(globalCommand)
 	engine.OnRegex(`[添加|修改]全局属性\s+([\s\S]*)$`, zero.AdminPermission, zero.OnlyPrivate, repo.OnceOnSuccess).SetBlock(true).
@@ -157,8 +138,8 @@ func init() {
 		Handle(closeTTSCommand)
 	engine.OnRegex(`[开启|切换]语音\s(.+)`, repo.OnceOnSuccess).SetBlock(true).Limit(ctxext.LimitByUser).
 		Handle(switchTTSCommand)
-	customPriority(engine.OnMessage(zero.OnlyToMe, repo.OnceOnSuccess), "inc:9").SetBlock(true).Limit(ctxext.LimitByUser).
-		Handle(conversationCommand)
+	//customPriority(engine.OnMessage(zero.OnlyToMe, repo.OnceOnSuccess), "inc:9").SetBlock(true).Limit(ctxext.LimitByUser).
+	//	Handle(conversationCommand)
 }
 
 func globalCommand(ctx *zero.Ctx) {
