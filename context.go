@@ -116,6 +116,9 @@ func createConversationContext(ctx *nano.Ctx, bot string) (autotypes.Conversatio
 
 	if bot == vars.OpenAIWeb {
 		cctx.BaseURL = "https://ai.fakeopen.com/api"
+		if dbToken.AppId != "" {
+			cctx.Model = dbToken.AppId
+		}
 	}
 
 	if bot == vars.Claude {
