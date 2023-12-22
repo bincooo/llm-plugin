@@ -173,7 +173,11 @@ func RemoveToken(id string) {
 
 // 通过ID、key（名称）、t（ai类型）获取角色配置
 func GetRole(id, key, t string) *RoleConfig {
-	var p RoleConfig
+	p := RoleConfig{Id: "-1", Key: "default", Type: t, Chain: "cache,tmpl", Section: 0}
+	if key == "默认" || key == "default" {
+		return &p
+	}
+
 	where := make([]string, 0)
 	if id != "" {
 		where = append(where, " id='"+id+"'")
