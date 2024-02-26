@@ -18,12 +18,13 @@
 # production
 /build
 /bin
+/data/
 
 # misc
 .DS_Store
 *.pem
 
-# vercel
+# web
 .vercel
 
 # local env files

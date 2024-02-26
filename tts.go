@@ -1,15 +1,19 @@
 package llm
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/FloatTech/floatbox/file"
 	"github.com/bincooo/llm-plugin/internal/util"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"io"
+	"math/rand"
 	"net/http"
-	"net/url"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
@@ -136,7 +140,7 @@ func (tts *_edgeTts) Tones() []string {
 }
 
 // ========================
-var genshinvoiceBaseUrl = "https://genshinvoice.top/api"
+var genshinvoiceBaseUrl = "https://v2.genshinvoice.top/run/predict"
 
 type _genshinvoice struct {
 }
@@ -148,7 +152,7 @@ func (tts *_genshinvoice) Audio(tone, tex string) ([]string, error) {
 		tex = strings.ReplaceAll(tex, k, v)
 	}
 
-	max := 180
+	max := 200
 	slice := make([]string, 0)
 	r := []rune(tex)
 
@@ -169,8 +173,45 @@ func (tts *_genshinvoice) Audio(tone, tex string) ([]string, error) {
 		if end+5 >= l {
 			msg = r[i*max : l]
 		}
-		response, err := http.Get(genshinvoiceBaseUrl + "?speaker=" + url.QueryEscape(tone) + "&text=" + url.QueryEscape(string(msg)) +
-			"&format=wav&noise=0.9&noisew=0.9&sdp_ratio=0.2")
+
+		payload := map[string]interface{}{
+			"data": []interface{}{
+				string(msg),
+				tone,
+				0.5,
+				0.6,
+				0.9,
+				1.2,
+				"ZH",
+				nil,
+				"",
+				"Text prompt",
+				"",
+				0.7,
+			},
+			"fn_index":     0,
+			"session_hash": randSession(),
+		}
+		marshal, err := json.Marshal(payload)
+		if err != nil {
+			return nil, err
+		}
+
+		client := http.DefaultClient
+		request, err := http.NewRequest(http.MethodPost, genshinvoiceBaseUrl, bytes.NewReader(marshal))
+		if err != nil {
+			return nil, errors.New("生成失败")
+		}
+
+		h := request.Header
+		h.Add("Content-Type", "application/json")
+		h.Add("Origin", "https://v2.genshinvoice.top")
+		h.Add("Referer", "https://v2.genshinvoice.top/?")
+		h.Add("Sec-Ch-Ua-Platform", "\"macOS\"")
+		h.Add("Sec-Ch-Ua", "\"Not A(Brand\";v=\"99\", \"Microsoft Edge\";v=\"121\", \"Chromium\";v=\"121\"")
+		h.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0")
+
+		response, err := client.Do(request)
 		if err != nil {
 			logrus.Error("语音生成失败: ", err)
 			return nil, errors.New("生成失败")
@@ -188,16 +229,41 @@ func (tts *_genshinvoice) Audio(tone, tex string) ([]string, error) {
 		if strings.Contains(response.Header.Get("Content-Type"), "text/html") {
 			return nil, errors.New(string(audio))
 		}
-		wav := "data/genshivoice_" + uuid.NewString() + ".wav"
-		err = os.WriteFile(wav, audio, 0666)
+
+		var dict map[string]interface{}
+		err = json.Unmarshal(audio, &dict)
 		if err != nil {
 			return nil, err
 		}
+
+		data, ok := dict["data"]
+		weburl := ""
+		if ok {
+			iter, ok := data.([]interface{})
+			if ok && reflect.DeepEqual(iter[0], "Success") {
+				dict, ok = iter[1].(map[string]interface{})
+				if ok && reflect.DeepEqual(dict["is_file"], true) {
+					weburl = fmt.Sprintf("https://v2.genshinvoice.top/file=%s", dict["name"])
+				}
+			}
+		}
+
+		if weburl == "" {
+			continue
+		}
+
+		wav := "data/genshivoice_" + uuid.NewString() + ".wav"
+		err = file.DownloadTo(weburl, wav)
+		if err != nil {
+			return nil, err
+		}
+
 		slice = append(slice, "file:///"+file.BOTPATH+"/"+wav)
 		go func() {
 			time.Sleep(60 * time.Second)
 			_ = os.Remove(wav)
 		}()
+		time.Sleep(time.Second)
 	}
 
 	return slice, nil
@@ -206,28 +272,310 @@ func (tts *_genshinvoice) Audio(tone, tex string) ([]string, error) {
 // 语音风格列表
 func (tts *_genshinvoice) Tones() []string {
 	return []string{
-		"丹恒", "克拉拉", "穹", "「信使」", "史瓦罗", "彦卿", "晴霓", "杰帕德", "素裳",
-		"绿芙蓉", "罗刹", "艾丝妲", "黑塔", "丹枢", "希露瓦", "白露", "费斯曼", "停云",
-		"可可利亚", "景元", "螺丝咕姆", "青镞", "公输师傅", "卡芙卡", "大毫", "驭空", "半夏",
-		"奥列格", "娜塔莎", "桑博", "瓦尔特", "阿兰", "伦纳德", "佩拉", "卡波特", "帕姆", "帕斯卡",
-		"青雀", "三月七", "刃", "姬子", "布洛妮娅", "希儿", "星", "符玄", "虎克", "银狼", "镜流",
-		"「博士」", "「大肉丸」", "九条裟罗", "佐西摩斯", "刻晴", "博易", "卡维", "可莉", "嘉玛", "埃舍尔",
-		"塔杰·拉德卡尼", "大慈树王", "宵宫", "康纳", "影", "枫原万叶", "欧菲妮", "玛乔丽", "珊瑚", "田铁嘴",
-		"砂糖", "神里绫华", "罗莎莉亚", "荒泷一斗", "莎拉", "迪希雅", "钟离", "阿圆", "阿娜耶", "阿拉夫", "雷泽",
-		"香菱", "龙二", "「公子」", "「白老先生」", "优菈", "凯瑟琳", "哲平", "夏洛蒂", "安柏", "巴达维", "式大将",
-		"斯坦利", "毗伽尔", "海妮耶", "爱德琳", "纳西妲", "老孟", "芙宁娜", "阿守", "阿祇", "丹吉尔", "丽莎", "五郎",
-		"元太", "克列门特", "克罗索", "北斗", "埃勒曼", "天目十五", "奥兹", "恶龙", "早柚", "杜拉夫", "松浦", "柊千里",
-		"甘雨", "石头", "纯水精灵？", "羽生田千鹤", "莱依拉", "菲谢尔", "言笑", "诺艾尔", "赛诺", "辛焱", "迪娜泽黛",
-		"那维莱特", "八重神子", "凯亚", "吴船长", "埃德", "天叔", "女士", "恕筠", "提纳里", "派蒙", "流浪者", "深渊使徒",
-		"玛格丽特", "珐露珊", "琴", "瑶瑶", "留云借风真君", "绮良良", "舒伯特", "荧", "莫娜", "行秋", "迈勒斯", "阿佩普",
-		"鹿野奈奈", "七七", "伊迪娅", "博来", "坎蒂丝", "埃尔欣根", "埃泽", "塞琉斯", "夜兰", "常九爷", "悦", "戴因斯雷布",
-		"笼钓瓶一心", "纳比尔", "胡桃", "艾尔海森", "艾莉丝", "菲米尼", "蒂玛乌斯", "迪奥娜", "阿晃", "阿洛瓦",
-		"陆行岩本真蕈·元素生命", "雷电将军", "魈", "鹿野院平藏", "「女士」", "「散兵」", "凝光", "妮露", "娜维娅",
-		"宛烟", "慧心", "托克", "托马", "掇星攫辰天君", "旁白", "浮游水蕈兽·元素生命", "烟绯", "玛塞勒", "百闻", "知易",
-		"米卡", "西拉杰", "迪卢克", "重云", "阿扎尔", "霍夫曼", "上杉", "久利须", "嘉良", "回声海螺", "多莉", "安西",
-		"德沃沙克", "拉赫曼", "林尼", "查尔斯", "深渊法师", "温迪", "爱贝尔", "珊瑚宫心海", "班尼特", "琳妮特", "申鹤",
-		"神里绫人", "艾伯特", "萍姥姥", "萨赫哈蒂", "萨齐因", "阿尔卡米", "阿贝多", "anzai", "久岐忍", "九条镰治", "云堇",
-		"伊利亚斯", "埃洛伊", "塞塔蕾", "拉齐", "昆钧", "柯莱", "沙扎曼", "海芭夏", "白术", "空", "艾文", "芭芭拉", "莫塞伊思",
-		"莺儿", "达达利亚", "迈蒙", "长生", "阿巴图伊", "陆景和", "莫弈", "夏彦", "左然",
+		"派蒙_ZH",
+		"纳西妲_ZH",
+		"凯亚_ZH",
+		"温迪_ZH",
+		"荒泷一斗_ZH",
+		"娜维娅_ZH",
+		"阿贝多_ZH",
+		"钟离_ZH",
+		"枫原万叶_ZH",
+		"那维莱特_ZH",
+		"艾尔海森_ZH",
+		"八重神子_ZH",
+		"宵宫_ZH",
+		"芙宁娜_ZH",
+		"迪希雅_ZH",
+		"提纳里_ZH",
+		"莱依拉_ZH",
+		"卡维_ZH",
+		"诺艾尔_ZH",
+		"赛诺_ZH",
+		"林尼_ZH",
+		"莫娜_ZH",
+		"托马_ZH",
+		"神里绫华_ZH",
+		"凝光_ZH",
+		"北斗_ZH",
+		"可莉_ZH",
+		"柯莱_ZH",
+		"迪奥娜_ZH",
+		"莱欧斯利_ZH",
+		"芭芭拉_ZH",
+		"雷电将军_ZH",
+		"珊瑚宫心海_ZH",
+		"魈_ZH",
+		"五郎_ZH",
+		"胡桃_ZH",
+		"鹿野院平藏_ZH",
+		"安柏_ZH",
+		"琴_ZH",
+		"重云_ZH",
+		"达达利亚_ZH",
+		"班尼特_ZH",
+		"夜兰_ZH",
+		"丽莎_ZH",
+		"香菱_ZH",
+		"妮露_ZH",
+		"刻晴_ZH",
+		"珐露珊_ZH",
+		"烟绯_ZH",
+		"辛焱_ZH",
+		"早柚_ZH",
+		"迪卢克_ZH",
+		"砂糖_ZH",
+		"云堇_ZH",
+		"久岐忍_ZH",
+		"神里绫人_ZH",
+		"优菈_ZH",
+		"甘雨_ZH",
+		"夏洛蒂_ZH",
+		"流浪者_ZH",
+		"行秋_ZH",
+		"夏沃蕾_ZH",
+		"戴因斯雷布_ZH",
+		"闲云_ZH",
+		"白术_ZH",
+		"菲谢尔_ZH",
+		"申鹤_ZH",
+		"九条裟罗_ZH",
+		"雷泽_ZH",
+		"荧_ZH",
+		"空_ZH",
+		"嘉明_ZH",
+		"菲米尼_ZH",
+		"多莉_ZH",
+		"迪娜泽黛_ZH",
+		"琳妮特_ZH",
+		"凯瑟琳_ZH",
+		"米卡_ZH",
+		"坎蒂丝_ZH",
+		"萍姥姥_ZH",
+		"罗莎莉亚_ZH",
+		"埃德_ZH",
+		"爱贝尔_ZH",
+		"伊迪娅_ZH",
+		"留云借风真君_ZH",
+		"瑶瑶_ZH",
+		"绮良良_ZH",
+		"七七_ZH",
+		"式大将_ZH",
+		"奥兹_ZH",
+		"泽维尔_ZH",
+		"哲平_ZH",
+		"大肉丸_ZH",
+		"托克_ZH",
+		"蒂玛乌斯_ZH",
+		"昆钧_ZH",
+		"欧菲妮_ZH",
+		"仆人_ZH",
+		"塞琉斯_ZH",
+		"言笑_ZH",
+		"迈勒斯_ZH",
+		"希格雯_ZH",
+		"拉赫曼_ZH",
+		"阿守_ZH",
+		"杜拉夫_ZH",
+		"阿晃_ZH",
+		"旁白_ZH",
+		"克洛琳德_ZH",
+		"伊利亚斯_ZH",
+		"爱德琳_ZH",
+		"埃洛伊_ZH",
+		"远黛_ZH",
+		"德沃沙克_ZH",
+		"玛乔丽_ZH",
+		"劳维克_ZH",
+		"塞塔蕾_ZH",
+		"海芭夏_ZH",
+		"九条镰治_ZH",
+		"柊千里_ZH",
+		"阿娜耶_ZH",
+		"千织_ZH",
+		"笼钓瓶一心_ZH",
+		"回声海螺_ZH",
+		"叶德_ZH",
+		"卡莉露_ZH",
+		"元太_ZH",
+		"漱玉_ZH",
+		"阿扎尔_ZH",
+		"查尔斯_ZH",
+		"阿洛瓦_ZH",
+		"纳比尔_ZH",
+		"莎拉_ZH",
+		"迪尔菲_ZH",
+		"康纳_ZH",
+		"博来_ZH",
+		"博士_ZH",
+		"玛塞勒_ZH",
+		"阿祇_ZH",
+		"玛格丽特_ZH",
+		"埃勒曼_ZH",
+		"羽生田千鹤_ZH",
+		"宛烟_ZH",
+		"海妮耶_ZH",
+		"科尔特_ZH",
+		"霍夫曼_ZH",
+		"一心传名刀_ZH",
+		"弗洛朗_ZH",
+		"佐西摩斯_ZH",
+		"鹿野奈奈_ZH",
+		"舒伯特_ZH",
+		"天叔_ZH",
+		"艾莉丝_ZH",
+		"龙二_ZH",
+		"芙卡洛斯_ZH",
+		"莺儿_ZH",
+		"嘉良_ZH",
+		"珊瑚_ZH",
+		"费迪南德_ZH",
+		"祖莉亚·德斯特雷_ZH",
+		"久利须_ZH",
+		"嘉玛_ZH",
+		"艾文_ZH",
+		"女士_ZH",
+		"丹吉尔_ZH",
+		"天目十五_ZH",
+		"白老先生_ZH",
+		"老孟_ZH",
+		"巴达维_ZH",
+		"长生_ZH",
+		"拉齐_ZH",
+		"吴船长_ZH",
+		"波洛_ZH",
+		"艾伯特_ZH",
+		"松浦_ZH",
+		"乐平波琳_ZH",
+		"埃泽_ZH",
+		"阿圆_ZH",
+		"莫塞伊思_ZH",
+		"杜吉耶_ZH",
+		"百闻_ZH",
+		"石头_ZH",
+		"阿拉夫_ZH",
+		"博易_ZH",
+		"斯坦利_ZH",
+		"迈蒙_ZH",
+		"掇星攫辰天君_ZH",
+		"毗伽尔_ZH",
+		"花角玉将_ZH",
+		"恶龙_ZH",
+		"知易_ZH",
+		"恕筠_ZH",
+		"克列门特_ZH",
+		"西拉杰_ZH",
+		"上杉_ZH",
+		"大慈树王_ZH",
+		"常九爷_ZH",
+		"阿尔卡米_ZH",
+		"沙扎曼_ZH",
+		"田铁嘴_ZH",
+		"克罗索_ZH",
+		"悦_ZH",
+		"阿巴图伊_ZH",
+		"阿佩普_ZH",
+		"埃尔欣根_ZH",
+		"萨赫哈蒂_ZH",
+		"塔杰·拉德卡尼_ZH",
+		"安西_ZH",
+		"埃舍尔_ZH",
+		"萨齐因_ZH",
+		"三月七_ZH",
+		"陌生人_ZH",
+		"丹恒_ZH",
+		"希儿_ZH",
+		"瓦尔特_ZH",
+		"希露瓦_ZH",
+		"佩拉_ZH",
+		"娜塔莎_ZH",
+		"布洛妮娅_ZH",
+		"穹_ZH",
+		"星_ZH",
+		"虎克_ZH",
+		"素裳_ZH",
+		"克拉拉_ZH",
+		"符玄_ZH",
+		"白露_ZH",
+		"杰帕德_ZH",
+		"景元_ZH",
+		"姬子_ZH",
+		"藿藿_ZH",
+		"桑博_ZH",
+		"流萤_ZH",
+		"艾丝妲_ZH",
+		"卡芙卡_ZH",
+		"黑天鹅_ZH",
+		"桂乃芬_ZH",
+		"玲可_ZH",
+		"托帕_ZH",
+		"彦卿_ZH",
+		"浮烟_ZH",
+		"黑塔_ZH",
+		"驭空_ZH",
+		"螺丝咕姆_ZH",
+		"停云_ZH",
+		"镜流_ZH",
+		"帕姆_ZH",
+		"卢卡_ZH",
+		"史瓦罗_ZH",
+		"罗刹_ZH",
+		"真理医生_ZH",
+		"阿兰_ZH",
+		"阮•梅_ZH",
+		"明曦_ZH",
+		"银狼_ZH",
+		"青雀_ZH",
+		"乔瓦尼_ZH",
+		"伦纳德_ZH",
+		"公输师傅_ZH",
+		"黄泉_ZH",
+		"晴霓_ZH",
+		"奥列格_ZH",
+		"丹枢_ZH",
+		"砂金_ZH",
+		"尾巴_ZH",
+		"寒鸦_ZH",
+		"雪衣_ZH",
+		"可可利亚_ZH",
+		"青镞_ZH",
+		"半夏_ZH",
+		"银枝_ZH",
+		"米沙_ZH",
+		"大毫_ZH",
+		"霄翰_ZH",
+		"信使_ZH",
+		"费斯曼_ZH",
+		"爱德华医生_ZH",
+		"警长_ZH",
+		"猎犬家系成员_ZH",
+		"绿芙蓉_ZH",
+		"金人会长_ZH",
+		"维利特_ZH",
+		"维尔德_ZH",
+		"斯科特_ZH",
+		"卡波特_ZH",
+		"刃_ZH",
+		"岩明_ZH",
+		"浣溪_ZH",
+		"女声_ZH",
+		"男声_ZH",
+		"陆景和",
+		"莫弈",
+		"左然",
+		"夏彦",
 	}
+}
+
+func randSession() string {
+	bin := "1234567890abcdefghijklmnopqrstuvwxyz"
+	binL := len(bin)
+
+	var buf []byte
+
+	for x := 0; x < 11; x++ {
+		buf = append(buf, bin[rand.Intn(binL-1)])
+	}
+
+	return string(buf)
 }

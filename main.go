@@ -2,6 +2,7 @@ package llm
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/FloatTech/floatbox/file"
 	"github.com/FloatTech/floatbox/web"
@@ -73,7 +74,7 @@ func init() {
 	if !file.IsExist(vars.E.DataFolder() + "/load.gif") {
 		data, e := web.GetData("https://cdn.jsdelivr.net/gh/bincooo/llm-plugin@data-1/load.gif")
 		if e != nil {
-			panic(e)
+			//			panic(e)
 		}
 		_ = os.WriteFile(vars.E.DataFolder()+"/load.gif", data, 0666)
 	}
@@ -406,6 +407,8 @@ func insertTokenCommand(ctx *zero.Ctx) {
 			return
 		}
 		newToken.Id = dbToken.Id
+	} else {
+		newToken.Id = fmt.Sprintf("%d", time.Now().UnixNano())
 	}
 
 	if err := repo.EditToken(newToken); err != nil {
@@ -622,6 +625,8 @@ func insertRoleCommand(ctx *zero.Ctx) {
 			return
 		}
 		newRole.Id = dbRole.Id
+	} else {
+		newRole.Id = fmt.Sprintf("%d", time.Now().UnixNano())
 	}
 
 	if err := repo.EditRole(newRole); err != nil {

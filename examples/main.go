@@ -51,7 +51,7 @@ func main() {
 func Context() types.ConversationContext {
 	return types.ConversationContext{
 		Id:  "1008611",
-		Bot: vars.Bing,
+		Bot: vars.OpenAIAPI,
 		//Bot:     vars.OpenAIWeb,
 		Token:   "",
 		Preset:  "",
